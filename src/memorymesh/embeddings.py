@@ -17,10 +17,12 @@ logger = logging.getLogger(__name__)
 # URL validation
 # ---------------------------------------------------------------------------
 
-_BLOCKED_HOSTS = frozenset({
-    "169.254.169.254",
-    "metadata.google.internal",
-})
+_BLOCKED_HOSTS = frozenset(
+    {
+        "169.254.169.254",
+        "metadata.google.internal",
+    }
+)
 
 _MAX_RESPONSE_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -44,20 +46,17 @@ def _validate_base_url(url: str, *, allow_http_localhost: bool = True) -> None:
     hostname = (parsed.hostname or "").lower()
 
     if hostname in _BLOCKED_HOSTS or hostname.startswith("fd00:"):
-        raise ValueError(
-            f"Blocked base URL: {url!r} targets a restricted address."
-        )
+        raise ValueError(f"Blocked base URL: {url!r} targets a restricted address.")
 
     if parsed.scheme == "http" and hostname not in ("localhost", "127.0.0.1", "::1"):
         if not allow_http_localhost:
-            raise ValueError(
-                f"Non-localhost HTTP URL is not allowed: {url!r}. Use HTTPS."
-            )
+            raise ValueError(f"Non-localhost HTTP URL is not allowed: {url!r}. Use HTTPS.")
         logger.warning(
             "Using plain HTTP for non-localhost URL %r. "
             "Consider using HTTPS to protect data in transit.",
             url,
         )
+
 
 # ---------------------------------------------------------------------------
 # Abstract base
@@ -311,10 +310,7 @@ class OllamaEmbedding(EmbeddingProvider):
         return embeddings
 
     def __repr__(self) -> str:
-        return (
-            f"OllamaEmbedding(model={self._model!r}, "
-            f"base_url={self._base_url!r})"
-        )
+        return f"OllamaEmbedding(model={self._model!r}, base_url={self._base_url!r})"
 
 
 # ---------------------------------------------------------------------------
@@ -382,9 +378,7 @@ class OpenAIEmbedding(EmbeddingProvider):
         import urllib.request
 
         url = f"{self._base_url}/embeddings"
-        payload = json.dumps(
-            {"model": self._model, "input": texts}
-        ).encode()
+        payload = json.dumps({"model": self._model, "input": texts}).encode()
         req = urllib.request.Request(
             url,
             data=payload,
@@ -400,15 +394,10 @@ class OpenAIEmbedding(EmbeddingProvider):
         except urllib.error.HTTPError as exc:
             body = exc.read().decode() if exc.fp else ""
             logger.error("OpenAI API error (%s): %s", exc.code, body)
-            raise RuntimeError(
-                "OpenAI embedding request failed "
-                f"(HTTP {exc.code})"
-            ) from exc
+            raise RuntimeError(f"OpenAI embedding request failed (HTTP {exc.code})") from exc
         except urllib.error.URLError as exc:
             logger.error("Could not connect to OpenAI API: %s", exc)
-            raise ConnectionError(
-                "Could not connect to OpenAI embedding API."
-            ) from exc
+            raise ConnectionError("Could not connect to OpenAI embedding API.") from exc
 
         # Sort by index to guarantee ordering matches input.
         items = sorted(data.get("data", []), key=lambda d: d["index"])
@@ -478,9 +467,7 @@ _PROVIDER_ALIASES: dict[str, type[EmbeddingProvider]] = {
 }
 
 
-def create_embedding_provider(
-    name: str, **kwargs: Any
-) -> EmbeddingProvider:
+def create_embedding_provider(name: str, **kwargs: Any) -> EmbeddingProvider:
     """Create an embedding provider by name.
 
     This is a convenience factory so that users can specify a provider as
@@ -508,8 +495,5 @@ def create_embedding_provider(
     cls = _PROVIDER_ALIASES.get(name.lower().strip())
     if cls is None:
         supported = ", ".join(sorted(_PROVIDER_ALIASES))
-        raise ValueError(
-            f"Unknown embedding provider {name!r}. "
-            f"Supported providers: {supported}"
-        )
+        raise ValueError(f"Unknown embedding provider {name!r}. Supported providers: {supported}")
     return cls(**kwargs)

@@ -197,9 +197,7 @@ def test_decay_zero_rate_no_change():
     now = datetime.now(timezone.utc)
     long_ago = now - timedelta(days=365)
 
-    mem_now = _make_memory(
-        "now", embedding=[1.0], importance=0.5, decay_rate=0.0, created_at=now
-    )
+    mem_now = _make_memory("now", embedding=[1.0], importance=0.5, decay_rate=0.0, created_at=now)
     mem_old = _make_memory(
         "old",
         embedding=[1.0],

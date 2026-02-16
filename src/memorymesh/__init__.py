@@ -14,8 +14,9 @@ Quick start::
 The library is framework-agnostic and works with any LLM backend -- Claude,
 GPT, Gemini, Llama, Ollama, or your own custom model.
 
-Memory is stored locally in a SQLite database (default location:
-``~/.memorymesh/memories.db``).  No external server is needed.
+Memory is stored locally in SQLite databases.  By default a global store
+lives at ``~/.memorymesh/global.db`` and an optional project-scoped store
+can be created per project.  No external server is needed.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ from .embeddings import (
     create_embedding_provider,
 )
 from .mcp_server import MemoryMeshMCPServer
-from .memory import Memory
+from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory, validate_scope
 from .relevance import RelevanceEngine, RelevanceWeights
 from .store import MemoryStore
 
@@ -43,6 +44,10 @@ __all__ = [
     "MemoryMeshMCPServer",
     # Data model
     "Memory",
+    # Scope constants
+    "PROJECT_SCOPE",
+    "GLOBAL_SCOPE",
+    "validate_scope",
     # Storage
     "MemoryStore",
     # Embeddings

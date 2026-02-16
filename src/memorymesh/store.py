@@ -27,6 +27,26 @@ from .memory import Memory
 _DEFAULT_DIR = os.path.join(os.path.expanduser("~"), ".memorymesh")
 _DEFAULT_DB = os.path.join(_DEFAULT_DIR, "memories.db")
 
+_DEFAULT_GLOBAL_DIR = _DEFAULT_DIR
+_DEFAULT_GLOBAL_DB = os.path.join(_DEFAULT_GLOBAL_DIR, "global.db")
+_LEGACY_DB = _DEFAULT_DB
+
+
+def migrate_legacy_db() -> bool:
+    """Migrate the legacy ``memories.db`` to ``global.db`` (one-time).
+
+    If ``global.db`` does not exist but the legacy ``memories.db`` does,
+    rename it so that existing data becomes the global store.
+
+    Returns:
+        ``True`` if a migration was performed, ``False`` otherwise.
+    """
+    if os.path.exists(_LEGACY_DB) and not os.path.exists(_DEFAULT_GLOBAL_DB):
+        os.makedirs(_DEFAULT_GLOBAL_DIR, mode=0o700, exist_ok=True)
+        os.rename(_LEGACY_DB, _DEFAULT_GLOBAL_DB)
+        return True
+    return False
+
 
 def _pack_embedding(embedding: list[float] | None) -> bytes | None:
     """Pack a list of floats into a compact binary blob (little-endian f32).
@@ -75,9 +95,7 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
         either vector has zero magnitude.
     """
     if len(a) != len(b):
-        raise ValueError(
-            f"Vectors must be the same length (got {len(a)} and {len(b)})."
-        )
+        raise ValueError(f"Vectors must be the same length (got {len(a)} and {len(b)}).")
 
     dot = 0.0
     mag_a = 0.0
@@ -342,9 +360,7 @@ class MemoryStore:
             or ``(None, None)`` if the database is empty.
         """
         with self._cursor() as cur:
-            cur.execute(
-                "SELECT MIN(created_at), MAX(created_at) FROM memories"
-            )
+            cur.execute("SELECT MIN(created_at), MAX(created_at) FROM memories")
             row = cur.fetchone()
         if row is None or row[0] is None:
             return (None, None)

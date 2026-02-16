@@ -93,9 +93,7 @@ class TestOpenAIEmbedding:
         """OpenAIEmbedding produces a non-empty vector."""
         import os
 
-        provider = create_provider(
-            "openai", api_key=os.getenv("OPENAI_API_KEY")
-        )
+        provider = create_provider("openai", api_key=os.getenv("OPENAI_API_KEY"))
         result = provider.embed("test sentence")
         assert isinstance(result, list)
         assert len(result) > 0

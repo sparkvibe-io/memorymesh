@@ -10,7 +10,8 @@ so it introduces zero additional dependencies.
 
 Configuration via environment variables:
 
-    MEMORYMESH_PATH        Path to the SQLite database file.
+    MEMORYMESH_PATH        Path to the project SQLite database file.
+    MEMORYMESH_GLOBAL_PATH Path to the global SQLite database file.
     MEMORYMESH_EMBEDDING   Embedding provider name (default: "none").
     MEMORYMESH_OLLAMA_MODEL  Ollama model name when using ollama embeddings.
     OPENAI_API_KEY         API key when using openai embeddings.
@@ -31,8 +32,10 @@ import logging
 import os
 import sys
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 from .core import MemoryMesh
+from .memory import GLOBAL_SCOPE, PROJECT_SCOPE
 
 # ---------------------------------------------------------------------------
 # Logging -- all output goes to stderr so stdout stays clean for JSON-RPC
@@ -90,7 +93,7 @@ TOOLS: list[dict[str, Any]] = [
                     "type": "object",
                     "description": (
                         "Optional key-value metadata to attach to the memory "
-                        "(e.g., {\"source\": \"user\", \"topic\": \"preferences\"})."
+                        '(e.g., {"source": "user", "topic": "preferences"}).'
                     ),
                     "additionalProperties": True,
                 },
@@ -102,6 +105,16 @@ TOOLS: list[dict[str, Any]] = [
                     ),
                     "minimum": 0.0,
                     "maximum": 1.0,
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"],
+                    "description": (
+                        "Where to store the memory. 'project' (default) stores in "
+                        "the current project's database. 'global' stores in the "
+                        "user-wide database for preferences and facts that apply "
+                        "across all projects."
+                    ),
                 },
             },
             "required": ["text"],
@@ -127,6 +140,14 @@ TOOLS: list[dict[str, Any]] = [
                     "minimum": 1,
                     "maximum": 100,
                 },
+                "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"],
+                    "description": (
+                        "Limit search to a specific scope. Omit to search both "
+                        "project and global memories (default)."
+                    ),
+                },
             },
             "required": ["query"],
         },
@@ -135,7 +156,8 @@ TOOLS: list[dict[str, Any]] = [
         "name": "forget",
         "description": (
             "Forget (permanently delete) a specific memory by its ID. "
-            "Use this when information is outdated or incorrect."
+            "Use this when information is outdated or incorrect. "
+            "Searches both project and global stores."
         ),
         "inputSchema": {
             "type": "object",
@@ -151,23 +173,42 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "forget_all",
         "description": (
-            "Forget ALL stored memories. This is a destructive operation that "
-            "permanently deletes every memory in the database. Use with caution."
+            "Forget ALL stored memories in the specified scope. This is a "
+            "destructive operation. Defaults to project scope only -- global "
+            "memories are protected unless explicitly targeted."
         ),
         "inputSchema": {
             "type": "object",
-            "properties": {},
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"],
+                    "description": (
+                        "Which scope to clear. Default: 'project'. Only memories "
+                        "in the specified scope will be deleted."
+                    ),
+                },
+            },
         },
     },
     {
         "name": "memory_stats",
         "description": (
             "Get statistics about stored memories: total count, oldest memory "
-            "timestamp, and newest memory timestamp."
+            "timestamp, and newest memory timestamp. Optionally filter by scope."
         ),
         "inputSchema": {
             "type": "object",
-            "properties": {},
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"],
+                    "description": (
+                        "Limit stats to a specific scope. Omit for combined "
+                        "stats across both project and global stores."
+                    ),
+                },
+            },
         },
     },
 ]
@@ -175,6 +216,46 @@ TOOLS: list[dict[str, Any]] = [
 # ---------------------------------------------------------------------------
 # MCP Server
 # ---------------------------------------------------------------------------
+
+
+def _detect_project_root(roots: list[dict[str, Any]] | None = None) -> str | None:
+    """Detect the project root directory.
+
+    Priority:
+        1. First URI in *roots* (from the MCP ``initialize`` request).
+        2. ``MEMORYMESH_PROJECT_ROOT`` environment variable.
+        3. Current working directory (if it contains a ``.git`` directory
+           or a ``pyproject.toml`` file, indicating it is a project root).
+        4. ``None`` -- no project root detected.
+
+    Args:
+        roots: The ``roots`` list from the MCP ``initialize`` params.
+
+    Returns:
+        An absolute directory path, or ``None``.
+    """
+    # 1. MCP roots
+    if roots:
+        uri = roots[0].get("uri", "")
+        if uri.startswith("file://"):
+            parsed = urlparse(uri)
+            path = unquote(parsed.path)
+            if os.path.isdir(path):
+                return os.path.realpath(path)
+
+    # 2. Environment variable
+    env_root = os.environ.get("MEMORYMESH_PROJECT_ROOT")
+    if env_root and os.path.isdir(env_root):
+        return os.path.realpath(env_root)
+
+    # 3. CWD heuristic
+    cwd = os.getcwd()
+    if os.path.isdir(os.path.join(cwd, ".git")) or os.path.isfile(
+        os.path.join(cwd, "pyproject.toml")
+    ):
+        return os.path.realpath(cwd)
+
+    return None
 
 
 class MemoryMeshMCPServer:
@@ -194,6 +275,7 @@ class MemoryMeshMCPServer:
         else:
             self._mesh = self._create_mesh_from_env()
         self._initialized = False
+        self._project_root: str | None = None
         logger.info("MemoryMeshMCPServer created with mesh=%r", self._mesh)
 
     # ------------------------------------------------------------------
@@ -201,17 +283,28 @@ class MemoryMeshMCPServer:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _create_mesh_from_env() -> MemoryMesh:
+    def _create_mesh_from_env(
+        project_root: str | None = None,
+    ) -> MemoryMesh:
         """Build a MemoryMesh instance from environment variables.
 
-        Reads ``MEMORYMESH_PATH``, ``MEMORYMESH_EMBEDDING``,
-        ``MEMORYMESH_OLLAMA_MODEL``, and ``OPENAI_API_KEY`` from the
-        environment and forwards them to the MemoryMesh constructor.
+        Reads ``MEMORYMESH_PATH``, ``MEMORYMESH_GLOBAL_PATH``,
+        ``MEMORYMESH_EMBEDDING``, ``MEMORYMESH_OLLAMA_MODEL``, and
+        ``OPENAI_API_KEY`` from the environment and forwards them to the
+        MemoryMesh constructor.
+
+        Args:
+            project_root: If provided, the project database will be
+                stored at ``<project_root>/.memorymesh/memories.db``.
 
         Returns:
             A configured :class:`MemoryMesh` instance.
         """
         path = os.environ.get("MEMORYMESH_PATH")
+        if path is None and project_root is not None:
+            path = os.path.join(project_root, ".memorymesh", "memories.db")
+
+        global_path = os.environ.get("MEMORYMESH_GLOBAL_PATH")
         embedding = os.environ.get("MEMORYMESH_EMBEDDING", "none")
 
         kwargs: dict[str, Any] = {}
@@ -225,11 +318,18 @@ class MemoryMeshMCPServer:
             kwargs["openai_api_key"] = openai_key
 
         logger.info(
-            "Creating MemoryMesh from env: path=%r, embedding=%r",
+            "Creating MemoryMesh from env: path=%r, global_path=%r, embedding=%r, project_root=%r",
             path,
+            global_path,
             embedding,
+            project_root,
         )
-        return MemoryMesh(path=path, embedding=embedding, **kwargs)
+        return MemoryMesh(
+            path=path,
+            global_path=global_path,
+            embedding=embedding,
+            **kwargs,
+        )
 
     # ------------------------------------------------------------------
     # Message loop
@@ -265,7 +365,8 @@ class MemoryMeshMCPServer:
             if isinstance(message, list):
                 if len(message) > MAX_BATCH_SIZE:
                     self._send_error(
-                        None, -32600,
+                        None,
+                        -32600,
                         f"Batch too large (max {MAX_BATCH_SIZE} messages).",
                     )
                     continue
@@ -346,7 +447,8 @@ class MemoryMeshMCPServer:
     def _handle_initialize(self, params: dict[str, Any]) -> dict[str, Any]:
         """Handle the ``initialize`` request.
 
-        Returns server capabilities and info per the MCP specification.
+        Detects the project root from MCP ``roots`` and recreates the
+        MemoryMesh instance with the correct project database path.
 
         Args:
             params: Client-provided initialization parameters.
@@ -356,10 +458,25 @@ class MemoryMeshMCPServer:
             ``serverInfo``.
         """
         self._initialized = True
+
+        client_name = params.get("clientInfo", {}).get("name", "unknown")
+        logger.info("Client initialized: %s", client_name)
+
+        # Detect project root from MCP roots list.
+        roots = params.get("roots")
+        project_root = _detect_project_root(roots)
+        self._project_root = project_root
+
+        # Recreate mesh with project-aware paths.
+        self._mesh.close()
+        self._mesh = self._create_mesh_from_env(project_root=project_root)
         logger.info(
-            "Client initialized: %s",
-            params.get("clientInfo", {}).get("name", "unknown"),
+            "Project root: %s  project_db: %s  global_db: %s",
+            project_root,
+            self._mesh.project_path,
+            self._mesh.global_path,
         )
+
         return {
             "protocolVersion": MCP_PROTOCOL_VERSION,
             "capabilities": {
@@ -422,9 +539,7 @@ class MemoryMeshMCPServer:
             ValueError: If the tool name is unknown or arguments are invalid.
         """
         if not self._initialized:
-            return self._tool_error(
-                "Server not initialized. Send 'initialize' request first."
-            )
+            return self._tool_error("Server not initialized. Send 'initialize' request first.")
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
 
@@ -457,7 +572,7 @@ class MemoryMeshMCPServer:
 
         Args:
             args: Tool arguments. Must include ``text``. May include
-                ``metadata`` and ``importance``.
+                ``metadata``, ``importance``, and ``scope``.
 
         Returns:
             MCP content response with the new memory ID.
@@ -484,25 +599,32 @@ class MemoryMeshMCPServer:
                 f"'metadata' exceeds maximum size of {MAX_METADATA_SIZE} bytes."
             )
 
+        scope = args.get("scope", PROJECT_SCOPE)
+        if scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
+            return self._tool_error("'scope' must be 'project' or 'global'.")
+
         # Enforce total memory count limit.
         if self._mesh.count() >= MAX_MEMORY_COUNT:
-            return self._tool_error(
-                f"Memory limit reached ({MAX_MEMORY_COUNT} memories)."
-            )
+            return self._tool_error(f"Memory limit reached ({MAX_MEMORY_COUNT} memories).")
 
         importance = args.get("importance", 0.5)
         if not isinstance(importance, (int, float)):
             return self._tool_error("'importance' must be a number.")
         importance = max(0.0, min(1.0, float(importance)))
 
-        memory_id = self._mesh.remember(
-            text=text,
-            metadata=metadata,
-            importance=importance,
-        )
+        try:
+            memory_id = self._mesh.remember(
+                text=text,
+                metadata=metadata,
+                importance=importance,
+                scope=scope,
+            )
+        except RuntimeError as exc:
+            return self._tool_error(str(exc))
 
         result = {
             "memory_id": memory_id,
+            "scope": scope,
             "message": f"Remembered: {text[:80]}{'...' if len(text) > 80 else ''}",
         }
         return self._tool_success(json.dumps(result, indent=2))
@@ -511,7 +633,8 @@ class MemoryMeshMCPServer:
         """Execute the ``recall`` tool.
 
         Args:
-            args: Tool arguments. Must include ``query``. May include ``k``.
+            args: Tool arguments. Must include ``query``. May include
+                ``k`` and ``scope``.
 
         Returns:
             MCP content response with a list of matching memories.
@@ -525,18 +648,25 @@ class MemoryMeshMCPServer:
             return self._tool_error("'k' must be a positive integer.")
         k = min(k, 100)
 
-        memories = self._mesh.recall(query=query, k=k)
+        scope = args.get("scope")  # None means search both
+        if scope is not None and scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
+            return self._tool_error("'scope' must be 'project', 'global', or omitted.")
+
+        memories = self._mesh.recall(query=query, k=k, scope=scope)
 
         results = []
         for mem in memories:
-            results.append({
-                "id": mem.id,
-                "text": mem.text,
-                "metadata": mem.metadata,
-                "importance": round(mem.importance, 4),
-                "created_at": mem.created_at.isoformat(),
-                "access_count": mem.access_count,
-            })
+            results.append(
+                {
+                    "id": mem.id,
+                    "text": mem.text,
+                    "metadata": mem.metadata,
+                    "importance": round(mem.importance, 4),
+                    "created_at": mem.created_at.isoformat(),
+                    "access_count": mem.access_count,
+                    "scope": mem.scope,
+                }
+            )
 
         output = {
             "query": query,
@@ -563,9 +693,7 @@ class MemoryMeshMCPServer:
             "memory_id": memory_id,
             "deleted": deleted,
             "message": (
-                f"Memory {memory_id} deleted."
-                if deleted
-                else f"Memory {memory_id} not found."
+                f"Memory {memory_id} deleted." if deleted else f"Memory {memory_id} not found."
             ),
         }
         return self._tool_success(json.dumps(result, indent=2))
@@ -574,15 +702,20 @@ class MemoryMeshMCPServer:
         """Execute the ``forget_all`` tool.
 
         Args:
-            args: Tool arguments (unused).
+            args: Tool arguments. May include ``scope``.
 
         Returns:
             MCP content response with the count of deleted memories.
         """
-        count = self._mesh.forget_all()
+        scope = args.get("scope", PROJECT_SCOPE)
+        if scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
+            return self._tool_error("'scope' must be 'project' or 'global'.")
+
+        count = self._mesh.forget_all(scope=scope)
         result = {
             "deleted_count": count,
-            "message": f"Deleted all {count} memories.",
+            "scope": scope,
+            "message": f"Deleted all {count} {scope} memories.",
         }
         return self._tool_success(json.dumps(result, indent=2))
 
@@ -590,21 +723,27 @@ class MemoryMeshMCPServer:
         """Execute the ``memory_stats`` tool.
 
         Args:
-            args: Tool arguments (unused).
+            args: Tool arguments. May include ``scope``.
 
         Returns:
             MCP content response with memory statistics.
         """
-        total = self._mesh.count()
+        scope = args.get("scope")  # None means combined
+        if scope is not None and scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
+            return self._tool_error("'scope' must be 'project', 'global', or omitted.")
 
-        # Use efficient SQL MIN/MAX query instead of loading all memories.
-        oldest_str, newest_str = self._mesh._store.get_time_range()
+        total = self._mesh.count(scope=scope)
+        oldest_str, newest_str = self._mesh.get_time_range(scope=scope)
 
-        result = {
+        result: dict[str, Any] = {
             "total_memories": total,
             "oldest_memory": oldest_str,
             "newest_memory": newest_str,
         }
+        if scope is not None:
+            result["scope"] = scope
+        if self._project_root is not None:
+            result["project_root"] = self._project_root
         return self._tool_success(json.dumps(result, indent=2))
 
     # ------------------------------------------------------------------

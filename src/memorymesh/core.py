@@ -11,9 +11,9 @@ import os
 from typing import Any
 
 from .embeddings import EmbeddingProvider, NoopEmbedding, create_embedding_provider
-from .memory import Memory
+from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory, validate_scope
 from .relevance import RelevanceEngine, RelevanceWeights
-from .store import MemoryStore
+from .store import _DEFAULT_GLOBAL_DB, MemoryStore, migrate_legacy_db
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +30,20 @@ class MemoryMesh:
         mem.remember("The user prefers dark mode.")
         results = mem.recall("What theme does the user like?")
 
+    MemoryMesh uses a **hybrid dual-store** architecture:
+
+    * A **project store** (``path``) holds project-specific memories.
+    * A **global store** (``global_path``) holds user preferences and
+      cross-project facts.
+
+    When ``path`` is ``None`` (the default), no project store is created
+    and only global memory is available.
+
     Args:
-        path: Path to the SQLite database file.  Defaults to
-            ``~/.memorymesh/memories.db``.
+        path: Path to the project SQLite database file, or ``None`` for
+            global-only mode.
+        global_path: Path to the global SQLite database file.  Defaults
+            to ``~/.memorymesh/global.db``.
         embedding: Embedding provider to use.  Accepts a string name
             (``"local"``, ``"ollama"``, ``"openai"``, ``"none"``) or an
             :class:`EmbeddingProvider` instance for full control.
@@ -54,12 +65,17 @@ class MemoryMesh:
     def __init__(
         self,
         path: str | os.PathLike[str] | None = None,
+        global_path: str | os.PathLike[str] | None = None,
         embedding: str | EmbeddingProvider = "local",
         relevance_weights: RelevanceWeights | None = None,
         **kwargs: Any,
     ) -> None:
-        # -- Storage -----------------------------------------------------
-        self._store = MemoryStore(path=path)
+        # -- Legacy migration --------------------------------------------
+        migrate_legacy_db()
+
+        # -- Storage (dual-store) ----------------------------------------
+        self._project_store: MemoryStore | None = MemoryStore(path=path) if path else None
+        self._global_store = MemoryStore(path=global_path or _DEFAULT_GLOBAL_DB)
 
         # -- Embedding provider ------------------------------------------
         if isinstance(embedding, EmbeddingProvider):
@@ -71,10 +87,25 @@ class MemoryMesh:
         self._engine = RelevanceEngine(weights=relevance_weights)
 
         logger.info(
-            "MemoryMesh initialised  store=%r  embedder=%r",
-            self._store,
+            "MemoryMesh initialised  project_store=%r  global_store=%r  embedder=%r",
+            self._project_store,
+            self._global_store,
             self._embedder,
         )
+
+    # ------------------------------------------------------------------
+    # Path properties
+    # ------------------------------------------------------------------
+
+    @property
+    def project_path(self) -> str | None:
+        """Return the project database path, or ``None`` if not configured."""
+        return self._project_store._path if self._project_store else None
+
+    @property
+    def global_path(self) -> str:
+        """Return the global database path."""
+        return self._global_store._path
 
     # ------------------------------------------------------------------
     # Public API
@@ -86,6 +117,7 @@ class MemoryMesh:
         metadata: dict[str, Any] | None = None,
         importance: float = 0.5,
         decay_rate: float = 0.01,
+        scope: str = PROJECT_SCOPE,
     ) -> str:
         """Store a new memory.
 
@@ -96,10 +128,18 @@ class MemoryMesh:
                 make the memory more prominent during recall.
             decay_rate: Rate at which importance decays over time.
                 ``0`` means the memory never decays.
+            scope: ``"project"`` (default) or ``"global"``.
 
         Returns:
             The unique ID of the newly created memory.
+
+        Raises:
+            RuntimeError: If *scope* is ``"project"`` but no project
+                database is configured.
         """
+        validate_scope(scope)
+        store = self._store_for_scope(scope)
+
         # Compute embedding (may be empty list for NoopEmbedding).
         emb = self._safe_embed(text)
 
@@ -109,10 +149,16 @@ class MemoryMesh:
             embedding=emb if emb else None,
             importance=importance,
             decay_rate=decay_rate,
+            scope=scope,
         )
 
-        self._store.save(memory)
-        logger.debug("Remembered memory %s (%d chars)", memory.id, len(text))
+        store.save(memory)
+        logger.debug(
+            "Remembered memory %s (%d chars, scope=%s)",
+            memory.id,
+            len(text),
+            scope,
+        )
         return memory.id
 
     def recall(
@@ -120,6 +166,7 @@ class MemoryMesh:
         query: str,
         k: int = 5,
         min_relevance: float = 0.0,
+        scope: str | None = None,
     ) -> list[Memory]:
         """Recall the most relevant memories for a query.
 
@@ -133,6 +180,8 @@ class MemoryMesh:
                 recall.
             k: Maximum number of memories to return.
             min_relevance: Discard results scoring below this threshold.
+            scope: ``"project"``, ``"global"``, or ``None`` (default)
+                to search both stores.
 
         Returns:
             Up to *k* :class:`Memory` objects sorted by descending
@@ -140,19 +189,27 @@ class MemoryMesh:
         """
         query_embedding = self._safe_embed(query)
 
-        if not query_embedding:
-            # Fallback: keyword search only.
-            candidates = self._store.search_by_text(query, limit=k * 4)
-        else:
-            # Vector search over all memories that have embeddings.
-            candidates = self._store.get_all_with_embeddings()
+        candidates: list[Memory] = []
 
-            # Also include keyword matches so we don't miss exact hits.
-            keyword_hits = self._store.search_by_text(query, limit=k * 2)
-            seen_ids = {m.id for m in candidates}
-            for hit in keyword_hits:
-                if hit.id not in seen_ids:
-                    candidates.append(hit)
+        if scope in (None, PROJECT_SCOPE) and self._project_store:
+            project_candidates = self._get_candidates(
+                query,
+                query_embedding,
+                self._project_store,
+            )
+            for m in project_candidates:
+                m.scope = PROJECT_SCOPE
+            candidates.extend(project_candidates)
+
+        if scope in (None, GLOBAL_SCOPE):
+            global_candidates = self._get_candidates(
+                query,
+                query_embedding,
+                self._global_store,
+            )
+            for m in global_candidates:
+                m.scope = GLOBAL_SCOPE
+            candidates.extend(global_candidates)
 
         if not candidates:
             return []
@@ -170,13 +227,18 @@ class MemoryMesh:
 
         # Update access counts for returned memories.
         for mem in results:
-            self._store.update_access(mem.id)
+            store = self._global_store if mem.scope == GLOBAL_SCOPE else self._project_store
+            if store:
+                store.update_access(mem.id)
             mem.access_count += 1
 
         return results
 
     def forget(self, memory_id: str) -> bool:
         """Forget (delete) a specific memory.
+
+        Checks the project store first, then falls back to the global
+        store.
 
         Args:
             memory_id: The ID of the memory to delete.
@@ -185,45 +247,98 @@ class MemoryMesh:
             ``True`` if the memory was found and deleted, ``False``
             otherwise.
         """
-        deleted = self._store.delete(memory_id)
-        if deleted:
-            logger.debug("Forgot memory %s", memory_id)
-        return deleted
+        if self._project_store and self._project_store.delete(memory_id):
+            logger.debug("Forgot memory %s (project)", memory_id)
+            return True
+        if self._global_store.delete(memory_id):
+            logger.debug("Forgot memory %s (global)", memory_id)
+            return True
+        return False
 
-    def forget_all(self) -> int:
-        """Forget all memories.
+    def forget_all(self, scope: str = PROJECT_SCOPE) -> int:
+        """Forget all memories in the given scope.
+
+        Args:
+            scope: ``"project"`` (default) or ``"global"``.
 
         Returns:
             The number of memories deleted.
         """
-        count = self._store.clear()
-        logger.info("Forgot all %d memories", count)
+        validate_scope(scope)
+        store = self._store_for_scope(scope, allow_none=True)
+        if store is None:
+            return 0
+        count = store.clear()
+        logger.info("Forgot all %d memories (scope=%s)", count, scope)
         return count
 
-    def count(self) -> int:
-        """Return the total number of stored memories.
+    def count(self, scope: str | None = None) -> int:
+        """Return the number of stored memories.
+
+        Args:
+            scope: ``"project"``, ``"global"``, or ``None`` (default)
+                for the total across both stores.
 
         Returns:
             An integer count.
         """
-        return self._store.count()
+        if scope == PROJECT_SCOPE:
+            return self._project_store.count() if self._project_store else 0
+        if scope == GLOBAL_SCOPE:
+            return self._global_store.count()
+        # scope is None → total
+        total = self._global_store.count()
+        if self._project_store:
+            total += self._project_store.count()
+        return total
 
     def list(
         self,
         limit: int = 10,
         offset: int = 0,
+        scope: str | None = None,
     ) -> list[Memory]:
         """List memories with pagination.
 
         Args:
             limit: Maximum number of memories to return.
             offset: Number of memories to skip.
+            scope: ``"project"``, ``"global"``, or ``None`` (default)
+                to merge both stores.
 
         Returns:
             A list of :class:`Memory` objects ordered by most recently
             updated first.
         """
-        return self._store.list_all(limit=limit, offset=offset)
+        if scope == PROJECT_SCOPE:
+            if not self._project_store:
+                return []
+            mems = self._project_store.list_all(limit=limit, offset=offset)
+            for m in mems:
+                m.scope = PROJECT_SCOPE
+            return mems
+        if scope == GLOBAL_SCOPE:
+            mems = self._global_store.list_all(limit=limit, offset=offset)
+            for m in mems:
+                m.scope = GLOBAL_SCOPE
+            return mems
+
+        # scope is None → merge both stores, re-sort by updated_at.
+        all_mems: list[Memory] = []
+        if self._project_store:
+            project_mems = self._project_store.list_all(
+                limit=limit + offset,
+            )
+            for m in project_mems:
+                m.scope = PROJECT_SCOPE
+            all_mems.extend(project_mems)
+        global_mems = self._global_store.list_all(limit=limit + offset)
+        for m in global_mems:
+            m.scope = GLOBAL_SCOPE
+        all_mems.extend(global_mems)
+
+        all_mems.sort(key=lambda m: m.updated_at, reverse=True)
+        return all_mems[offset : offset + limit]
 
     def search(self, text: str, k: int = 5) -> list[Memory]:
         """Search memories by text similarity.
@@ -242,21 +357,68 @@ class MemoryMesh:
     def get(self, memory_id: str) -> Memory | None:
         """Retrieve a single memory by ID.
 
+        Checks the project store first, then falls back to the global
+        store.
+
         Args:
             memory_id: The unique identifier.
 
         Returns:
             The :class:`Memory` if found, otherwise ``None``.
         """
-        return self._store.get(memory_id)
+        if self._project_store:
+            mem = self._project_store.get(memory_id)
+            if mem is not None:
+                mem.scope = PROJECT_SCOPE
+                return mem
+        mem = self._global_store.get(memory_id)
+        if mem is not None:
+            mem.scope = GLOBAL_SCOPE
+        return mem
+
+    def get_time_range(
+        self,
+        scope: str | None = None,
+    ) -> tuple[str | None, str | None]:
+        """Return the oldest and newest ``created_at`` timestamps.
+
+        Args:
+            scope: ``"project"``, ``"global"``, or ``None`` (default)
+                to consider both stores.
+
+        Returns:
+            A ``(oldest_iso, newest_iso)`` tuple, or ``(None, None)``
+            if the relevant store(s) are empty.
+        """
+        if scope == PROJECT_SCOPE:
+            if not self._project_store:
+                return (None, None)
+            return self._project_store.get_time_range()
+        if scope == GLOBAL_SCOPE:
+            return self._global_store.get_time_range()
+
+        # scope is None → merge ranges from both stores.
+        ranges: list[tuple[str | None, str | None]] = []
+        if self._project_store:
+            ranges.append(self._project_store.get_time_range())
+        ranges.append(self._global_store.get_time_range())
+
+        oldest_vals = [r[0] for r in ranges if r[0] is not None]
+        newest_vals = [r[1] for r in ranges if r[1] is not None]
+
+        oldest = min(oldest_vals) if oldest_vals else None
+        newest = max(newest_vals) if newest_vals else None
+        return (oldest, newest)
 
     # ------------------------------------------------------------------
     # Context manager
     # ------------------------------------------------------------------
 
     def close(self) -> None:
-        """Close the underlying database connection."""
-        self._store.close()
+        """Close the underlying database connections."""
+        if self._project_store:
+            self._project_store.close()
+        self._global_store.close()
 
     def __enter__(self) -> MemoryMesh:
         return self
@@ -272,6 +434,62 @@ class MemoryMesh:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _store_for_scope(
+        self,
+        scope: str,
+        allow_none: bool = False,
+    ) -> MemoryStore:
+        """Return the :class:`MemoryStore` for the given *scope*.
+
+        Args:
+            scope: ``"project"`` or ``"global"``.
+            allow_none: If ``True``, return ``None`` instead of raising
+                when the project store is not configured.
+
+        Raises:
+            RuntimeError: If *scope* is ``"project"`` but no project
+                database is configured and *allow_none* is ``False``.
+        """
+        if scope == GLOBAL_SCOPE:
+            return self._global_store
+        if self._project_store is not None:
+            return self._project_store
+        if allow_none:
+            return None  # type: ignore[return-value]
+        raise RuntimeError(
+            "No project database configured. Pass 'path' to MemoryMesh() or use scope='global'."
+        )
+
+    def _get_candidates(
+        self,
+        query: str,
+        query_embedding: list[float],
+        store: MemoryStore,
+    ) -> list[Memory]:
+        """Gather candidate memories from a single store.
+
+        Combines vector search (when embeddings are available) with
+        keyword fallback, mirroring the original ``recall`` logic.
+
+        Args:
+            query: The natural-language query.
+            query_embedding: Pre-computed query embedding (may be empty).
+            store: The :class:`MemoryStore` to search.
+
+        Returns:
+            A deduplicated list of candidate :class:`Memory` objects.
+        """
+        if not query_embedding:
+            return store.search_by_text(query, limit=20)
+
+        candidates = store.get_all_with_embeddings()
+        keyword_hits = store.search_by_text(query, limit=10)
+        seen_ids = {m.id for m in candidates}
+        for hit in keyword_hits:
+            if hit.id not in seen_ids:
+                candidates.append(hit)
+        return candidates
 
     @staticmethod
     def _build_embedder(name: str, **kwargs: Any) -> EmbeddingProvider:
@@ -321,8 +539,7 @@ class MemoryMesh:
             return self._embedder.embed(text)
         except Exception:
             logger.warning(
-                "Embedding failed for text (%.40s...), falling back to "
-                "keyword search.",
+                "Embedding failed for text (%.40s...), falling back to keyword search.",
                 text,
                 exc_info=True,
             )
@@ -334,6 +551,7 @@ class MemoryMesh:
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
-            f"MemoryMesh(store={self._store!r}, "
+            f"MemoryMesh(project_store={self._project_store!r}, "
+            f"global_store={self._global_store!r}, "
             f"embedder={self._embedder!r})"
         )

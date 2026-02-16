@@ -58,6 +58,9 @@ Desktop.ini
 *.sqlite
 *.sqlite3
 
+# MemoryMesh project-local data directory
+.memorymesh/
+
 # Node (in case of any JS tooling)
 node_modules/
 

@@ -93,7 +93,7 @@ pip install memorymesh[all]
 ## Features
 
 - **Simple API** -- `remember()`, `recall()`, `forget()`. That is the core interface. No boilerplate, no configuration ceremony.
-- **SQLite-Based** -- All memory is stored in a single SQLite file. No database servers, no migrations, no infrastructure.
+- **SQLite-Based** -- All memory is stored in SQLite files. No database servers, no migrations, no infrastructure.
 - **Framework-Agnostic** -- Works with any LLM, any framework, any architecture. Use it with LangChain, LlamaIndex, raw API calls, or your own custom setup.
 - **Pluggable Embeddings** -- Choose the embedding provider that fits your needs: local models, Ollama, OpenAI, or plain keyword matching with zero dependencies.
 - **Time-Based Decay** -- Memories naturally fade over time, just like human memory. Recent and frequently accessed memories are ranked higher.
@@ -174,8 +174,9 @@ memory = MemoryMesh(embedding="none")
 from memorymesh import MemoryMesh
 
 memory = MemoryMesh(
-    # Storage
-    path="~/.memorymesh/memories.db",     # Where to store the SQLite database
+    # Storage (dual-store)
+    path=".memorymesh/memories.db",       # Project-specific database (optional)
+    global_path="~/.memorymesh/global.db", # User-wide global database
 
     # Embeddings
     embedding="local",                    # "none", "local", "ollama", "openai"
@@ -249,20 +250,42 @@ Add to your MCP settings (`.cursor/mcp.json` or equivalent):
 
 | Variable | Default | Description |
 |---|---|---|
-| `MEMORYMESH_PATH` | `~/.memorymesh/memories.db` | Path to the SQLite database |
+| `MEMORYMESH_PATH` | Auto-detected | Path to the project SQLite database |
+| `MEMORYMESH_GLOBAL_PATH` | `~/.memorymesh/global.db` | Path to the global SQLite database |
+| `MEMORYMESH_PROJECT_ROOT` | Auto-detected | Project root directory |
 | `MEMORYMESH_EMBEDDING` | `none` | Embedding provider (`none`, `local`, `ollama`, `openai`) |
 | `MEMORYMESH_OLLAMA_MODEL` | `nomic-embed-text` | Ollama model name |
 | `OPENAI_API_KEY` | -- | Required only when using `openai` embeddings |
+
+### Hybrid Memory Architecture
+
+The MCP server uses a **hybrid dual-store** architecture that separates project-specific and global memories:
+
+```
+~/.memorymesh/
+  global.db                    <- user preferences, identity, cross-project facts
+
+<project-root>/.memorymesh/
+  memories.db                  <- project-specific memories, decisions, patterns
+```
+
+The project root is automatically detected from MCP client roots, the `MEMORYMESH_PROJECT_ROOT` environment variable, or the current working directory (if it contains `.git` or `pyproject.toml`).
+
+All tools accept an optional `scope` parameter (`"project"` or `"global"`):
+- `remember(scope="project")` -- stores in the project database (default)
+- `remember(scope="global")` -- stores in the user-wide database
+- `recall()` -- searches both databases by default
+- `forget_all(scope="project")` -- only clears project memories (default; global is protected)
 
 ### Available Tools
 
 Once connected, your AI assistant gains these tools:
 
-- **`remember`** -- Store facts, preferences, and decisions
-- **`recall`** -- Search memories by natural language query
-- **`forget`** -- Delete a specific memory by ID
-- **`forget_all`** -- Delete all memories (use with caution)
-- **`memory_stats`** -- View memory count and timestamps
+- **`remember`** -- Store facts, preferences, and decisions (supports `scope`)
+- **`recall`** -- Search memories by natural language query (supports `scope`)
+- **`forget`** -- Delete a specific memory by ID (searches both stores)
+- **`forget_all`** -- Delete all memories in a scope (defaults to project)
+- **`memory_stats`** -- View memory count and timestamps (supports `scope`)
 
 No API keys are needed for the default setup. The MCP server uses keyword matching out of the box. Add an embedding provider for semantic search.
 
@@ -272,15 +295,16 @@ No API keys are needed for the default setup. The MCP server uses keyword matchi
 
 | Method | Description |
 |---|---|
-| `remember(text, metadata, importance)` | Store a new memory |
-| `recall(query, k, min_relevance)` | Recall top-k relevant memories |
-| `forget(memory_id)` | Delete a specific memory |
-| `forget_all()` | Delete all memories |
+| `remember(text, metadata, importance, scope)` | Store a new memory (scope: `"project"` or `"global"`) |
+| `recall(query, k, min_relevance, scope)` | Recall top-k relevant memories (scope: `None` for both) |
+| `forget(memory_id)` | Delete a specific memory (checks both stores) |
+| `forget_all(scope)` | Delete all memories in a scope (default: `"project"`) |
 | `search(text, k)` | Alias for `recall()` |
-| `get(memory_id)` | Retrieve a memory by ID |
-| `list(limit, offset)` | List memories with pagination |
-| `count()` | Get total number of memories |
-| `close()` | Close the database connection |
+| `get(memory_id)` | Retrieve a memory by ID (checks both stores) |
+| `list(limit, offset, scope)` | List memories with pagination |
+| `count(scope)` | Get number of memories (scope: `None` for total) |
+| `get_time_range(scope)` | Get oldest/newest timestamps |
+| `close()` | Close both database connections |
 
 Context manager support:
 
@@ -325,8 +349,9 @@ with MemoryMesh() as memory:
           |
           v
 +-----------------------------------------------------+
-|                 SQLite Database                       |
-|              (single .db file)                       |
+|                 SQLite Databases                      |
+|   ~/.memorymesh/global.db  (user-wide preferences)  |
+|   <project>/.memorymesh/memories.db  (per-project)  |
 +-----------------------------------------------------+
 ```
 

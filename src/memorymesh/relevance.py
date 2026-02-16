@@ -107,11 +107,7 @@ class RelevanceEngine:
 
         # 1. Semantic similarity ----------------------------------------
         sem_score = 0.0
-        if (
-            query_embedding
-            and memory.embedding
-            and len(query_embedding) == len(memory.embedding)
-        ):
+        if query_embedding and memory.embedding and len(query_embedding) == len(memory.embedding):
             raw = cosine_similarity(query_embedding, memory.embedding)
             # Shift from [-1, 1] to [0, 1]
             sem_score = (raw + 1.0) / 2.0
@@ -180,9 +176,7 @@ class RelevanceEngine:
             days = delta_seconds / 86400.0
 
             if mem.decay_rate > 0 and days > 0:
-                mem.importance = mem.importance * math.exp(
-                    -mem.decay_rate * days
-                )
+                mem.importance = mem.importance * math.exp(-mem.decay_rate * days)
                 # Clamp to [0, 1].
                 mem.importance = max(0.0, min(1.0, mem.importance))
 

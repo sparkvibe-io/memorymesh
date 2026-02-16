@@ -12,6 +12,27 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+# ---------------------------------------------------------------------------
+# Scope constants
+# ---------------------------------------------------------------------------
+
+PROJECT_SCOPE = "project"
+GLOBAL_SCOPE = "global"
+_VALID_SCOPES = frozenset({PROJECT_SCOPE, GLOBAL_SCOPE})
+
+
+def validate_scope(scope: str) -> None:
+    """Validate that *scope* is one of the recognised scope values.
+
+    Args:
+        scope: The scope string to validate.
+
+    Raises:
+        ValueError: If *scope* is not ``"project"`` or ``"global"``.
+    """
+    if scope not in _VALID_SCOPES:
+        raise ValueError(f"Invalid scope {scope!r}. Must be one of: {sorted(_VALID_SCOPES)}")
+
 
 def _utcnow() -> datetime:
     """Return the current UTC time as a timezone-aware datetime."""
@@ -38,6 +59,9 @@ class Memory:
         importance: User-assigned importance score in the range ``[0, 1]``.
         decay_rate: Rate at which importance decays over time.  Higher values
             cause faster forgetting.  ``0`` means the memory never decays.
+        scope: Which store this memory belongs to (``"project"`` or
+            ``"global"``).  Set dynamically by the core layer; not persisted
+            as a database column.
     """
 
     text: str
@@ -49,6 +73,7 @@ class Memory:
     access_count: int = 0
     importance: float = 0.5
     decay_rate: float = 0.01
+    scope: str = PROJECT_SCOPE
 
     # ------------------------------------------------------------------
     # Validation
@@ -60,6 +85,7 @@ class Memory:
             raise ValueError("Memory text must not be empty.")
         self.importance = max(0.0, min(1.0, float(self.importance)))
         self.decay_rate = max(0.0, float(self.decay_rate))
+        validate_scope(self.scope)
 
     # ------------------------------------------------------------------
     # Serialisation helpers
@@ -69,7 +95,8 @@ class Memory:
         """Serialise the memory to a plain dictionary.
 
         Datetimes are converted to ISO-8601 strings and the embedding is
-        included as-is (list of floats or ``None``).
+        included as-is (list of floats or ``None``).  The ``scope`` field
+        is always included.
 
         Returns:
             A JSON-safe dictionary representation of this memory.
@@ -103,6 +130,9 @@ class Memory:
         meta = d.get("metadata")
         if isinstance(meta, str):
             d["metadata"] = json.loads(meta)
+
+        # Default scope for backward compatibility with older data.
+        d.setdefault("scope", PROJECT_SCOPE)
 
         return cls(**d)
 

@@ -18,11 +18,20 @@ MemoryMesh is an open-source, embeddable AI memory library. It provides persiste
 ```
 core.py (public API: remember / recall / forget)
   -> store.py (SQLite read/write, schema migrations)
+     - project store: <project-root>/.memorymesh/memories.db
+     - global store:  ~/.memorymesh/global.db
   -> embeddings.py (pluggable: local, ollama, openai, none)
   -> relevance.py (scoring: similarity + keywords + time decay)
 ```
 
-All state is stored in a single SQLite database file. No external services are required for the base installation.
+MemoryMesh uses a **hybrid dual-store** pattern:
+
+- **Project store** (`<project-root>/.memorymesh/memories.db`) -- project-specific memories, decisions, and patterns. Isolated per project.
+- **Global store** (`~/.memorymesh/global.db`) -- user preferences, identity, and cross-project facts. Shared across all projects.
+
+`recall()` queries both stores by default and merges results. `forget_all()` defaults to clearing only the project store (global is protected). The `scope` parameter (`"project"` or `"global"`) controls routing throughout the API.
+
+No external services are required for the base installation.
 
 ## Development
 
