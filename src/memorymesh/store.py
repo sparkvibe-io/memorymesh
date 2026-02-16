@@ -6,6 +6,7 @@ local SQLite database.  No external server is required.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import math
 import os
@@ -137,13 +138,17 @@ class MemoryStore:
     # ------------------------------------------------------------------
 
     def __init__(self, path: str | os.PathLike[str] | None = None) -> None:
-        self._path = str(path) if path is not None else _DEFAULT_DB
+        raw_path = str(path) if path is not None else _DEFAULT_DB
+        # Canonicalise and resolve symlinks to prevent traversal attacks.
+        self._path = os.path.realpath(os.path.expanduser(raw_path))
         self._local = threading.local()
 
-        # Ensure parent directory exists.
+        # Ensure parent directory exists with restrictive permissions.
         parent = os.path.dirname(self._path)
         if parent:
-            os.makedirs(parent, exist_ok=True)
+            os.makedirs(parent, mode=0o700, exist_ok=True)
+            with contextlib.suppress(OSError):
+                os.chmod(parent, 0o700)
 
         # Initialise schema on the calling thread's connection.
         with self._cursor() as cur:
@@ -159,7 +164,7 @@ class MemoryStore:
         """Return (or create) a SQLite connection for the current thread."""
         conn: sqlite3.Connection | None = getattr(self._local, "conn", None)
         if conn is None:
-            conn = sqlite3.connect(self._path, check_same_thread=False)
+            conn = sqlite3.connect(self._path)
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.execute("PRAGMA foreign_keys=ON;")
             conn.row_factory = sqlite3.Row
@@ -257,12 +262,14 @@ class MemoryStore:
         Returns:
             A list of matching :class:`Memory` objects ordered by recency.
         """
-        pattern = f"%{query}%"
+        # Escape LIKE wildcards so they are matched literally.
+        escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{escaped}%"
         with self._cursor() as cur:
             cur.execute(
                 """
                 SELECT * FROM memories
-                WHERE text LIKE ?
+                WHERE text LIKE ? ESCAPE '\\'
                 ORDER BY updated_at DESC
                 LIMIT ?
                 """,
@@ -294,17 +301,22 @@ class MemoryStore:
             rows = cur.fetchall()
         return [self._row_to_memory(r) for r in rows]
 
-    def get_all_with_embeddings(self) -> list[Memory]:
-        """Return all memories that have a non-NULL embedding.
+    def get_all_with_embeddings(self, limit: int = 10_000) -> list[Memory]:
+        """Return memories that have a non-NULL embedding.
 
         Used internally by the recall pipeline to perform vector search.
+
+        Args:
+            limit: Maximum number of memories to return. Defaults to 10,000
+                to prevent loading excessively large datasets into memory.
 
         Returns:
             A list of :class:`Memory` objects that have embeddings.
         """
         with self._cursor() as cur:
             cur.execute(
-                "SELECT * FROM memories WHERE embedding_blob IS NOT NULL"
+                "SELECT * FROM memories WHERE embedding_blob IS NOT NULL LIMIT ?",
+                (limit,),
             )
             rows = cur.fetchall()
         return [self._row_to_memory(r) for r in rows]
@@ -319,6 +331,24 @@ class MemoryStore:
             cur.execute("SELECT COUNT(*) FROM memories")
             result = cur.fetchone()
         return result[0] if result else 0
+
+    def get_time_range(self) -> tuple[str | None, str | None]:
+        """Return the oldest and newest created_at timestamps.
+
+        Uses a single efficient SQL query instead of loading all memories.
+
+        Returns:
+            A tuple of ``(oldest_iso, newest_iso)`` ISO-8601 strings,
+            or ``(None, None)`` if the database is empty.
+        """
+        with self._cursor() as cur:
+            cur.execute(
+                "SELECT MIN(created_at), MAX(created_at) FROM memories"
+            )
+            row = cur.fetchone()
+        if row is None or row[0] is None:
+            return (None, None)
+        return (row[0], row[1])
 
     def clear(self) -> int:
         """Delete **all** memories from the database.

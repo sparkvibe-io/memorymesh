@@ -46,7 +46,9 @@ from memorymesh import MemoryMesh  # noqa: E402
 # Configuration
 # ---------------------------------------------------------------------------
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = os.environ.get("MEMORYMESH_DEMO_MODEL", "claude-haiku-4-5-20251001")
+OLLAMA_MODEL = os.environ.get("MEMORYMESH_DEMO_OLLAMA_MODEL", "qwen2.5:1.5b")
+USE_OLLAMA = os.environ.get("MEMORYMESH_DEMO_LLM", "").lower() == "ollama"
 DB_PATH = Path.home() / ".memorymesh" / "demo.db"
 SYSTEM_PROMPT = (
     "You are a helpful assistant. You have persistent memory about the user. "

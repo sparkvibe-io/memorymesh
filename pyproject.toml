@@ -43,16 +43,13 @@ local = [
     "sentence-transformers>=2.0",
     "torch",
 ]
-ollama = [
-    "httpx>=0.24",
-]
+ollama = []  # Ollama provider uses stdlib urllib -- no extra deps needed
 openai = [
     "openai>=1.0",
 ]
 all = [
     "sentence-transformers>=2.0",
     "torch",
-    "httpx>=0.24",
     "openai>=1.0",
 ]
 dev = [

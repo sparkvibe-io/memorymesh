@@ -14,6 +14,52 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# URL validation
+# ---------------------------------------------------------------------------
+
+_BLOCKED_HOSTS = frozenset({
+    "169.254.169.254",
+    "metadata.google.internal",
+})
+
+_MAX_RESPONSE_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def _validate_base_url(url: str, *, allow_http_localhost: bool = True) -> None:
+    """Validate an embedding API base URL.
+
+    Blocks known cloud metadata endpoints and optionally warns when
+    plain HTTP is used for non-localhost URLs.
+
+    Args:
+        url: The base URL to validate.
+        allow_http_localhost: If ``True``, allow ``http://`` for localhost.
+
+    Raises:
+        ValueError: If the URL targets a blocked host.
+    """
+    import urllib.parse
+
+    parsed = urllib.parse.urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+
+    if hostname in _BLOCKED_HOSTS or hostname.startswith("fd00:"):
+        raise ValueError(
+            f"Blocked base URL: {url!r} targets a restricted address."
+        )
+
+    if parsed.scheme == "http" and hostname not in ("localhost", "127.0.0.1", "::1"):
+        if not allow_http_localhost:
+            raise ValueError(
+                f"Non-localhost HTTP URL is not allowed: {url!r}. Use HTTPS."
+            )
+        logger.warning(
+            "Using plain HTTP for non-localhost URL %r. "
+            "Consider using HTTPS to protect data in transit.",
+            url,
+        )
+
+# ---------------------------------------------------------------------------
 # Abstract base
 # ---------------------------------------------------------------------------
 
@@ -180,6 +226,7 @@ class OllamaEmbedding(EmbeddingProvider):
     ) -> None:
         self._model = model
         self._base_url = base_url.rstrip("/")
+        _validate_base_url(self._base_url)
 
     def embed(self, text: str) -> list[float]:
         """Compute the embedding via the Ollama ``/api/embed`` endpoint.
@@ -208,7 +255,7 @@ class OllamaEmbedding(EmbeddingProvider):
 
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                data = json.loads(resp.read().decode())
+                data = json.loads(resp.read(_MAX_RESPONSE_BYTES).decode())
         except urllib.error.URLError as exc:
             raise ConnectionError(
                 f"Could not connect to Ollama at {self._base_url}. "
@@ -217,9 +264,8 @@ class OllamaEmbedding(EmbeddingProvider):
 
         embeddings = data.get("embeddings")
         if not embeddings:
-            raise RuntimeError(
-                f"Ollama returned an unexpected response: {data}"
-            )
+            keys = ", ".join(str(k) for k in data) if isinstance(data, dict) else "N/A"
+            raise RuntimeError(f"Ollama returned an unexpected response (keys: {keys})")
         return embeddings[0]
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
@@ -251,7 +297,7 @@ class OllamaEmbedding(EmbeddingProvider):
 
         try:
             with urllib.request.urlopen(req, timeout=120) as resp:
-                data = json.loads(resp.read().decode())
+                data = json.loads(resp.read(_MAX_RESPONSE_BYTES).decode())
         except urllib.error.URLError as exc:
             raise ConnectionError(
                 f"Could not connect to Ollama at {self._base_url}. "
@@ -260,9 +306,8 @@ class OllamaEmbedding(EmbeddingProvider):
 
         embeddings = data.get("embeddings")
         if not embeddings:
-            raise RuntimeError(
-                f"Ollama returned an unexpected response: {data}"
-            )
+            keys = ", ".join(str(k) for k in data) if isinstance(data, dict) else "N/A"
+            raise RuntimeError(f"Ollama returned an unexpected response (keys: {keys})")
         return embeddings
 
     def __repr__(self) -> str:
@@ -307,6 +352,7 @@ class OpenAIEmbedding(EmbeddingProvider):
             )
         self._model = model
         self._base_url = base_url.rstrip("/")
+        _validate_base_url(self._base_url, allow_http_localhost=False)
 
     def embed(self, text: str) -> list[float]:
         """Compute the embedding via the OpenAI API.
@@ -350,15 +396,18 @@ class OpenAIEmbedding(EmbeddingProvider):
 
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                data = json.loads(resp.read().decode())
+                data = json.loads(resp.read(_MAX_RESPONSE_BYTES).decode())
         except urllib.error.HTTPError as exc:
             body = exc.read().decode() if exc.fp else ""
+            logger.error("OpenAI API error (%s): %s", exc.code, body)
             raise RuntimeError(
-                f"OpenAI API error ({exc.code}): {body}"
+                "OpenAI embedding request failed "
+                f"(HTTP {exc.code})"
             ) from exc
         except urllib.error.URLError as exc:
+            logger.error("Could not connect to OpenAI API: %s", exc)
             raise ConnectionError(
-                f"Could not connect to OpenAI API at {self._base_url}: {exc}"
+                "Could not connect to OpenAI embedding API."
             ) from exc
 
         # Sort by index to guarantee ordering matches input.

@@ -58,6 +58,16 @@ SERVER_INFO = {
 }
 
 # ---------------------------------------------------------------------------
+# Security limits
+# ---------------------------------------------------------------------------
+
+MAX_TEXT_LENGTH = 100_000  # Maximum characters for memory text
+MAX_METADATA_SIZE = 10_000  # Maximum serialized metadata JSON size (bytes)
+MAX_MESSAGE_SIZE = 1_000_000  # Maximum JSON-RPC message size (bytes)
+MAX_BATCH_SIZE = 50  # Maximum messages in a JSON-RPC batch
+MAX_MEMORY_COUNT = 100_000  # Maximum total memories allowed
+
+# ---------------------------------------------------------------------------
 # Tool definitions
 # ---------------------------------------------------------------------------
 
@@ -235,8 +245,11 @@ class MemoryMeshMCPServer:
         """
         logger.info("MCP server starting, reading from stdin...")
 
-        for line in sys.stdin:
-            line = line.strip()
+        for raw_line in sys.stdin:
+            line = raw_line.strip()
+            if len(line) > MAX_MESSAGE_SIZE:
+                self._send_error(None, -32600, "Message too large.")
+                continue
             if not line:
                 continue
 
@@ -250,6 +263,12 @@ class MemoryMeshMCPServer:
 
             # JSON-RPC batch is not required by MCP but handle gracefully.
             if isinstance(message, list):
+                if len(message) > MAX_BATCH_SIZE:
+                    self._send_error(
+                        None, -32600,
+                        f"Batch too large (max {MAX_BATCH_SIZE} messages).",
+                    )
+                    continue
                 for msg in message:
                     self._handle_message(msg)
             else:
@@ -291,9 +310,9 @@ class MemoryMeshMCPServer:
 
         try:
             result = handler(params)
-        except Exception as exc:
+        except Exception:
             logger.exception("Error handling %s", method)
-            self._send_error(msg_id, -32603, f"Internal error: {exc}")
+            self._send_error(msg_id, -32603, "Internal server error.")
             return
 
         # Only send a response for requests (those with an id).
@@ -402,10 +421,14 @@ class MemoryMeshMCPServer:
         Raises:
             ValueError: If the tool name is unknown or arguments are invalid.
         """
+        if not self._initialized:
+            return self._tool_error(
+                "Server not initialized. Send 'initialize' request first."
+            )
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
 
-        logger.info("Tool call: %s(%r)", tool_name, arguments)
+        logger.info("Tool call: %s (keys: %s)", tool_name, list(arguments.keys()))
 
         tool_handlers: dict[str, Any] = {
             "remember": self._tool_remember,
@@ -421,9 +444,9 @@ class MemoryMeshMCPServer:
 
         try:
             return handler(arguments)
-        except Exception as exc:
+        except Exception:
             logger.exception("Tool %s raised an exception", tool_name)
-            return self._tool_error(f"Tool '{tool_name}' failed: {exc}")
+            return self._tool_error(f"Tool '{tool_name}' encountered an error.")
 
     # ------------------------------------------------------------------
     # Tool implementations
@@ -443,9 +466,29 @@ class MemoryMeshMCPServer:
         if not text or not isinstance(text, str):
             return self._tool_error("'text' is required and must be a non-empty string.")
 
+        if len(text) > MAX_TEXT_LENGTH:
+            return self._tool_error(
+                f"'text' exceeds maximum length of {MAX_TEXT_LENGTH} characters."
+            )
+
+        if "\x00" in text:
+            return self._tool_error("'text' must not contain null bytes.")
+
         metadata = args.get("metadata", {})
         if not isinstance(metadata, dict):
             return self._tool_error("'metadata' must be an object.")
+
+        meta_serialized = json.dumps(metadata, ensure_ascii=False)
+        if len(meta_serialized) > MAX_METADATA_SIZE:
+            return self._tool_error(
+                f"'metadata' exceeds maximum size of {MAX_METADATA_SIZE} bytes."
+            )
+
+        # Enforce total memory count limit.
+        if self._mesh.count() >= MAX_MEMORY_COUNT:
+            return self._tool_error(
+                f"Memory limit reached ({MAX_MEMORY_COUNT} memories)."
+            )
 
         importance = args.get("importance", 0.5)
         if not isinstance(importance, (int, float)):
@@ -554,17 +597,8 @@ class MemoryMeshMCPServer:
         """
         total = self._mesh.count()
 
-        oldest_str: str | None = None
-        newest_str: str | None = None
-
-        if total > 0:
-            # Fetch the oldest and newest memories by listing with pagination.
-            # list() returns memories ordered by most recently updated first.
-            all_memories = self._mesh.list(limit=total, offset=0)
-            if all_memories:
-                sorted_by_created = sorted(all_memories, key=lambda m: m.created_at)
-                oldest_str = sorted_by_created[0].created_at.isoformat()
-                newest_str = sorted_by_created[-1].created_at.isoformat()
+        # Use efficient SQL MIN/MAX query instead of loading all memories.
+        oldest_str, newest_str = self._mesh._store.get_time_range()
 
         result = {
             "total_memories": total,

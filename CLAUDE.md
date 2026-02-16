@@ -10,6 +10,8 @@ MemoryMesh is an open-source, embeddable AI memory library. It provides persiste
 - `src/memorymesh/store.py` -- SQLite storage layer. Handles all database operations, schema management, and memory persistence.
 - `src/memorymesh/embeddings.py` -- Pluggable embedding providers. Abstracts over local (sentence-transformers), Ollama, OpenAI, and keyword-based matching.
 - `src/memorymesh/relevance.py` -- Relevance scoring engine. Combines vector similarity, keyword overlap, and time-based decay to rank memories.
+- `src/memorymesh/mcp_server.py` -- MCP (Model Context Protocol) server. Exposes memory tools over stdin/stdout JSON-RPC for use with Claude Code, Cursor, and other MCP-compatible clients.
+- `src/memorymesh/memory.py` -- The `Memory` dataclass. Defines the core data model used throughout the library.
 
 ## Architecture
 

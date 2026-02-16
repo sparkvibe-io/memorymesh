@@ -6,7 +6,7 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/memorymesh.svg)](https://pypi.org/project/memorymesh/)
 [![CI](https://github.com/sparkvibe-io/memorymesh/actions/workflows/ci.yml/badge.svg)](https://github.com/sparkvibe-io/memorymesh/actions/workflows/ci.yml)
 
-**MemoryMesh** is an embeddable, zero-dependency AI memory library that gives any LLM application persistent, intelligent memory. Install it with `pip install memorymesh` and add long-term memory to your AI agents in three lines of code. It works with ANY LLM -- Claude, GPT, Gemini, Llama, Ollama, Mistral, and more. Runs everywhere Python runs (Linux, macOS, Windows). All data stays on your machine by default. No servers, no APIs, no cloud accounts required. Privacy-first by design.
+**MemoryMesh** is an embeddable AI memory library with zero required dependencies that gives any LLM application persistent, intelligent memory. Install it with `pip install memorymesh` and add long-term memory to your AI agents in three lines of code. It works with ANY LLM -- Claude, GPT, Gemini, Llama, Ollama, Mistral, and more. Runs everywhere Python runs (Linux, macOS, Windows). All data stays on your machine by default. No servers, no APIs, no cloud accounts required. Privacy-first by design.
 
 ---
 
@@ -36,6 +36,36 @@ results = memory.recall("What does the user prefer?")
 ```
 
 That is it. Three lines to give your AI application persistent, semantic memory.
+
+---
+
+## How MemoryMesh Saves You Money
+
+Without memory, every AI interaction requires re-sending the full conversation history. As conversations grow, so do your token costs -- linearly, every single turn.
+
+**MemoryMesh flips this model.** Instead of sending thousands of tokens of raw conversation history, you recall only the top-k most relevant memories (typically 3-5 short passages) and inject them as context. The conversation itself stays short.
+
+### Token cost comparison: 20-turn conversation
+
+| Turn | Without Memory (full history) | With MemoryMesh (recall top-5) |
+|------|-------------------------------|-------------------------------|
+| 1    | ~250 tokens                   | ~250 tokens                   |
+| 5    | ~1,500 tokens                 | ~400 tokens                   |
+| 10   | ~4,000 tokens                 | ~400 tokens                   |
+| 20   | ~10,000 tokens                | ~450 tokens                   |
+| 50   | ~30,000 tokens                | ~500 tokens                   |
+
+*Estimates based on typical conversational turns of ~250 tokens each, with MemoryMesh recalling 5 relevant memories (~50 tokens each) per turn.*
+
+### How it works
+
+1. **Store** -- After each interaction, `remember()` the key facts (not the full conversation).
+2. **Recall** -- Before the next interaction, `recall()` retrieves only the most relevant memories ranked by semantic similarity, recency, and importance.
+3. **Inject** -- Pass the recalled memories as system context to your LLM. The full conversation history is never needed.
+
+**The result:** Your input token count stays roughly constant regardless of how long the conversation has been going. At $3/million input tokens (Claude Sonnet pricing), a 50-turn conversation costs ~$0.09 without memory vs. ~$0.0015 with MemoryMesh -- a **60x reduction**.
+
+This is not just a cost saving. It also means your application stays within context window limits, responds faster (fewer tokens to process), and retrieves only what is actually relevant instead of forcing the LLM to sift through thousands of tokens of conversational noise.
 
 ---
 
@@ -117,23 +147,23 @@ MemoryMesh supports multiple embedding backends. Choose the one that fits your c
 
 | Provider | Install | Requires | Best For |
 |---|---|---|---|
-| `none` (default) | `pip install memorymesh` | Nothing | Getting started, keyword-based matching |
-| `local` | `pip install memorymesh[local]` | ~500MB model download | Privacy-sensitive apps, offline use |
+| `none` | `pip install memorymesh` | Nothing | Getting started, keyword-based matching |
+| `local` (default) | `pip install memorymesh[local]` | ~500MB model download | Privacy-sensitive apps, offline use |
 | `ollama` | `pip install memorymesh[ollama]` | Running Ollama instance | Local semantic search, GPU acceleration |
 | `openai` | `pip install memorymesh[openai]` | OpenAI API key | Highest quality embeddings |
 
 ```python
-# Use local embeddings (runs on your machine, no API calls)
-memory = MemoryMesh(embedding_provider="local")
+# Use local embeddings (runs on your machine, no API calls) -- this is the default
+memory = MemoryMesh(embedding="local")
 
 # Use Ollama (connect to local Ollama server)
-memory = MemoryMesh(embedding_provider="ollama", embedding_model="nomic-embed-text")
+memory = MemoryMesh(embedding="ollama", ollama_model="nomic-embed-text")
 
 # Use OpenAI embeddings
-memory = MemoryMesh(embedding_provider="openai", openai_api_key="sk-...")
+memory = MemoryMesh(embedding="openai", openai_api_key="sk-...")
 
 # No embeddings (pure keyword matching, zero dependencies)
-memory = MemoryMesh(embedding_provider="none")
+memory = MemoryMesh(embedding="none")
 ```
 
 ---
@@ -145,20 +175,120 @@ from memorymesh import MemoryMesh
 
 memory = MemoryMesh(
     # Storage
-    db_path="~/.memorymesh/memory.db",   # Where to store the SQLite database
-    namespace="default",                  # Isolate memories by namespace
+    path="~/.memorymesh/memories.db",     # Where to store the SQLite database
 
     # Embeddings
-    embedding_provider="local",           # "none", "local", "ollama", "openai"
-    embedding_model=None,                 # Model name (provider-specific)
+    embedding="local",                    # "none", "local", "ollama", "openai"
 
-    # Relevance tuning
-    decay_rate=0.01,                      # How fast memories fade (0 = never, 1 = fast)
-    min_relevance=0.3,                    # Minimum relevance score to return results
+    # Embedding provider options (passed as **kwargs)
+    # ollama_model="nomic-embed-text",    # Ollama model name
+    # ollama_base_url="http://localhost:11434",
+    # openai_api_key="sk-...",            # OpenAI API key
+    # local_model="all-MiniLM-L6-v2",    # sentence-transformers model
+    # local_device="cpu",                 # PyTorch device
 
-    # Limits
-    max_results=10,                       # Maximum number of results from recall()
+    # Relevance tuning (optional)
+    # relevance_weights=RelevanceWeights(
+    #     semantic=0.5,
+    #     recency=0.2,
+    #     importance=0.2,
+    #     frequency=0.1,
+    # ),
 )
+```
+
+---
+
+## MCP Server (Claude Code, Cursor, Windsurf)
+
+MemoryMesh includes a built-in MCP (Model Context Protocol) server that lets AI assistants use your memory directly as a tool. **No API keys required** for the default setup.
+
+### Claude Code
+
+Add to your Claude Code settings (`~/.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "memorymesh": {
+      "command": "memorymesh-mcp"
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to your Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "memorymesh": {
+      "command": "memorymesh-mcp"
+    }
+  }
+}
+```
+
+### Cursor / Windsurf
+
+Add to your MCP settings (`.cursor/mcp.json` or equivalent):
+
+```json
+{
+  "mcpServers": {
+    "memorymesh": {
+      "command": "memorymesh-mcp"
+    }
+  }
+}
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `MEMORYMESH_PATH` | `~/.memorymesh/memories.db` | Path to the SQLite database |
+| `MEMORYMESH_EMBEDDING` | `none` | Embedding provider (`none`, `local`, `ollama`, `openai`) |
+| `MEMORYMESH_OLLAMA_MODEL` | `nomic-embed-text` | Ollama model name |
+| `OPENAI_API_KEY` | -- | Required only when using `openai` embeddings |
+
+### Available Tools
+
+Once connected, your AI assistant gains these tools:
+
+- **`remember`** -- Store facts, preferences, and decisions
+- **`recall`** -- Search memories by natural language query
+- **`forget`** -- Delete a specific memory by ID
+- **`forget_all`** -- Delete all memories (use with caution)
+- **`memory_stats`** -- View memory count and timestamps
+
+No API keys are needed for the default setup. The MCP server uses keyword matching out of the box. Add an embedding provider for semantic search.
+
+---
+
+## API Reference
+
+| Method | Description |
+|---|---|
+| `remember(text, metadata, importance)` | Store a new memory |
+| `recall(query, k, min_relevance)` | Recall top-k relevant memories |
+| `forget(memory_id)` | Delete a specific memory |
+| `forget_all()` | Delete all memories |
+| `search(text, k)` | Alias for `recall()` |
+| `get(memory_id)` | Retrieve a memory by ID |
+| `list(limit, offset)` | List memories with pagination |
+| `count()` | Get total number of memories |
+| `close()` | Close the database connection |
+
+Context manager support:
+
+```python
+with MemoryMesh() as memory:
+    memory.remember("User prefers TypeScript")
+    results = memory.recall("programming language")
+# Database connection is cleanly closed
 ```
 
 ---
@@ -209,15 +339,15 @@ memory = MemoryMesh(
 - SQLite-based persistent storage
 - Pluggable embedding providers (none, local, ollama, openai)
 - Time-based memory decay
-- Namespace isolation
-- Basic relevance scoring
+- Relevance scoring (semantic + recency + importance + frequency)
+- MCP server for AI assistant integration (Claude Code, Cursor, Windsurf)
+- Security hardening (input limits, path validation, error sanitization)
 
 ### v1.0 -- Production Ready
 - Episodic memory (conversation-aware recall)
 - Auto-importance scoring (detect and prioritize key information)
 - Encrypted storage at rest
 - Memory compaction and summarization
-- MCP server for AI assistant integration
 - Comprehensive benchmarks
 
 ### v2.0 -- Advanced
