@@ -31,6 +31,7 @@ from .embeddings import (
     OpenAIEmbedding,
     create_embedding_provider,
 )
+from .mcp_server import MemoryMeshMCPServer
 from .memory import Memory
 from .relevance import RelevanceEngine, RelevanceWeights
 from .store import MemoryStore
@@ -38,6 +39,8 @@ from .store import MemoryStore
 __all__ = [
     # Core
     "MemoryMesh",
+    # MCP Server
+    "MemoryMeshMCPServer",
     # Data model
     "Memory",
     # Storage

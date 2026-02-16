@@ -68,8 +68,8 @@ Repository = "https://github.com/sparkvibe-io/memorymesh"
 Issues = "https://github.com/sparkvibe-io/memorymesh/issues"
 Documentation = "https://github.com/sparkvibe-io/memorymesh#readme"
 
-# [project.scripts]
-# memorymesh-mcp = "memorymesh.mcp_server:main"  # Coming in v0.2
+[project.scripts]
+memorymesh-mcp = "memorymesh.mcp_server:main"
 
 # ---------------------------------------------------------------------------
 # Ruff
