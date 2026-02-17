@@ -58,12 +58,15 @@ dev = [
     "ruff",
     "mypy",
 ]
+docs = [
+    "mkdocs-material>=9.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/sparkvibe-io/memorymesh"
 Repository = "https://github.com/sparkvibe-io/memorymesh"
 Issues = "https://github.com/sparkvibe-io/memorymesh/issues"
-Documentation = "https://github.com/sparkvibe-io/memorymesh#readme"
+Documentation = "https://sparkvibe-io.github.io/memorymesh/"
 
 [project.scripts]
 memorymesh = "memorymesh.cli:main"
