@@ -165,34 +165,6 @@ class MemoryStore:
     """
 
     # ------------------------------------------------------------------
-    # Schema
-    # ------------------------------------------------------------------
-
-    _CREATE_TABLE = """
-        CREATE TABLE IF NOT EXISTS memories (
-            id            TEXT PRIMARY KEY,
-            text          TEXT    NOT NULL,
-            metadata_json TEXT    NOT NULL DEFAULT '{}',
-            embedding_blob BLOB,
-            created_at    TEXT    NOT NULL,
-            updated_at    TEXT    NOT NULL,
-            access_count  INTEGER NOT NULL DEFAULT 0,
-            importance    REAL    NOT NULL DEFAULT 0.5,
-            decay_rate    REAL    NOT NULL DEFAULT 0.01
-        );
-    """
-
-    _CREATE_INDEX_IMPORTANCE = """
-        CREATE INDEX IF NOT EXISTS idx_memories_importance
-        ON memories (importance DESC);
-    """
-
-    _CREATE_INDEX_UPDATED = """
-        CREATE INDEX IF NOT EXISTS idx_memories_updated_at
-        ON memories (updated_at DESC);
-    """
-
-    # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
 
@@ -209,11 +181,20 @@ class MemoryStore:
             with contextlib.suppress(OSError):
                 os.chmod(parent, 0o700)
 
-        # Initialise schema on the calling thread's connection.
-        with self._cursor() as cur:
-            cur.execute(self._CREATE_TABLE)
-            cur.execute(self._CREATE_INDEX_IMPORTANCE)
-            cur.execute(self._CREATE_INDEX_UPDATED)
+        # Initialise schema via the migration system.
+        from .migrations import ensure_schema
+
+        conn = self._get_connection()
+        self._schema_version = ensure_schema(conn)
+
+    @property
+    def schema_version(self) -> int:
+        """The current schema version of this database.
+
+        Returns:
+            An integer representing the schema version.
+        """
+        return self._schema_version
 
     # ------------------------------------------------------------------
     # Connection management (per-thread)
