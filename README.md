@@ -168,6 +168,17 @@ memory = MemoryMesh(embedding="openai", openai_api_key="sk-...")
 memory = MemoryMesh(embedding="none")
 ```
 
+### Using Ollama
+
+Ollama must be running before MemoryMesh can use it for embeddings:
+
+```bash
+ollama serve                              # start in a terminal
+ollama pull nomic-embed-text              # download the model (once)
+```
+
+If you installed Ollama via Homebrew, it may already be running as a service (`brew services info ollama`). If `ollama serve` says "address already in use", Ollama is already running and you're good to go.
+
 ---
 
 ## Configuration
