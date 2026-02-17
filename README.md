@@ -93,7 +93,7 @@ pip install memorymesh[all]
 ## Features
 
 - **Simple API** -- `remember()`, `recall()`, `forget()`. That is the core interface. No boilerplate, no configuration ceremony.
-- **SQLite-Based** -- All memory is stored in SQLite files. No database servers, no migrations, no infrastructure.
+- **SQLite-Based** -- All memory is stored in SQLite files. No database servers, no infrastructure. Automatic schema migrations keep existing databases up to date.
 - **Framework-Agnostic** -- Works with any LLM, any framework, any architecture. Use it with LangChain, LlamaIndex, raw API calls, or your own custom setup.
 - **Pluggable Embeddings** -- Choose the embedding provider that fits your needs: local models, Ollama, OpenAI, or plain keyword matching with zero dependencies.
 - **Time-Based Decay** -- Memories naturally fade over time, just like human memory. Recent and frequently accessed memories are ranked higher.
@@ -518,6 +518,28 @@ with MemoryMesh() as memory:
 
 ---
 
+## Schema Migrations
+
+MemoryMesh automatically manages database schema upgrades. When you upgrade to a new version, existing databases are migrated in-place without data loss the next time they are opened.
+
+- **Fresh installs** get the latest schema directly.
+- **Existing databases** are detected and upgraded incrementally.
+- **Both project and global stores** migrate independently.
+- **Migrations are additive-only** -- no columns or data are ever deleted.
+
+Schema versions are tracked using SQLite's built-in `PRAGMA user_version`. You can check the current version programmatically:
+
+```python
+from memorymesh.store import MemoryStore
+
+store = MemoryStore(path=".memorymesh/memories.db")
+print(store.schema_version)  # e.g. 1
+```
+
+No manual steps are needed. Just upgrade the package and MemoryMesh handles the rest.
+
+---
+
 ## FAQ
 
 ### Why SQLite, not plain .md files?
@@ -564,6 +586,7 @@ Yes. MemoryMesh stores memories in SQLite and can sync to Claude Code (`MEMORY.m
 - Security hardening (input limits, path validation, error sanitization)
 - Multi-tool memory sync (Claude, Codex, Gemini) with format adapters
 - CLI viewer and management tool (`memorymesh list`, `search`, `stats`, `sync`, etc.)
+- Automatic schema migrations (safe upgrades for existing databases)
 
 ### v1.0 -- Production Ready
 - Episodic memory (conversation-aware recall)
