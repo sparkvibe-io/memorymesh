@@ -67,6 +67,50 @@ make all           # Run lint + test + typecheck
 4. **Cross-Platform** -- Must work on Linux, macOS, and Windows without platform-specific code paths where possible.
 5. **Privacy-First** -- No telemetry, no phone-home, no cloud calls unless the user explicitly configures an external embedding provider.
 
+## Memory (MemoryMesh)
+
+MemoryMesh is configured as an MCP tool in this project. You MUST use it proactively -- it is the project's own product and dogfooding it is essential.
+
+### When to `recall`
+
+- **Start of every conversation**: Call `recall` with a summary of the user's request to check for relevant prior context, decisions, patterns, or past mistakes.
+- **Before making architectural decisions**: Recall to check if this was decided before.
+- **When debugging**: Recall to check if this problem or error was encountered previously.
+- **When unsure about conventions**: Recall to check if there's a stored preference or pattern.
+
+### When to `remember`
+
+- **After completing a task**: Store key decisions, patterns discovered, and architectural choices made.
+- **When the user teaches you something**: Immediately remember it (scope: global for preferences, project for project-specific facts).
+- **After fixing a non-trivial bug**: Remember the root cause and fix so it's not repeated.
+- **When discovering undocumented patterns**: Store conventions found in the codebase.
+- **After a multi-step investigation**: Remember the conclusion so future sessions don't repeat the work.
+
+### What to remember
+
+- Architectural decisions and their rationale
+- Bug fixes, root causes, and solutions that took multiple attempts
+- User preferences confirmed during work
+- File patterns and conventions discovered
+- Implementation approaches that worked (or didn't)
+- Test strategies and edge cases found
+
+### What NOT to remember
+
+- Trivial single-use facts (e.g., "ran tests, they passed")
+- Information already written in this CLAUDE.md file
+- Temporary state or in-progress work details
+- Verbatim code snippets (store the insight, not the code)
+
+### Scope guidance
+
+- Use `scope: "project"` for project-specific decisions, architecture, and patterns.
+- Use `scope: "global"` for user preferences, identity, and cross-project facts.
+
+### Priority
+
+- **Prefer MemoryMesh over auto-memory files** for persistent knowledge storage. MemoryMesh is the product we are building -- using it validates the product and builds a useful knowledge base.
+
 ## Code Conventions
 
 - **Type hints** are required on all public functions and methods.

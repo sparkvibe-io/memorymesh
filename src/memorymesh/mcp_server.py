@@ -32,10 +32,10 @@ import logging
 import os
 import sys
 from typing import Any
-from urllib.parse import unquote, urlparse
 
 from .core import MemoryMesh
 from .memory import GLOBAL_SCOPE, PROJECT_SCOPE
+from .store import detect_project_root
 
 # ---------------------------------------------------------------------------
 # Logging -- all output goes to stderr so stdout stays clean for JSON-RPC
@@ -71,8 +71,28 @@ MAX_BATCH_SIZE = 50  # Maximum messages in a JSON-RPC batch
 MAX_MEMORY_COUNT = 100_000  # Maximum total memories allowed
 
 # ---------------------------------------------------------------------------
-# Tool definitions
+# Prompt and tool definitions
 # ---------------------------------------------------------------------------
+
+PROMPTS: list[dict[str, Any]] = [
+    {
+        "name": "memory-context",
+        "description": (
+            "Retrieve relevant memories for the current conversation context. "
+            "Provides persistent knowledge from previous sessions."
+        ),
+        "arguments": [
+            {
+                "name": "context",
+                "description": (
+                    "Brief description of what you're working on "
+                    "(used to find relevant memories)."
+                ),
+                "required": False,
+            }
+        ],
+    },
+]
 
 TOOLS: list[dict[str, Any]] = [
     {
@@ -216,46 +236,6 @@ TOOLS: list[dict[str, Any]] = [
 # ---------------------------------------------------------------------------
 # MCP Server
 # ---------------------------------------------------------------------------
-
-
-def _detect_project_root(roots: list[dict[str, Any]] | None = None) -> str | None:
-    """Detect the project root directory.
-
-    Priority:
-        1. First URI in *roots* (from the MCP ``initialize`` request).
-        2. ``MEMORYMESH_PROJECT_ROOT`` environment variable.
-        3. Current working directory (if it contains a ``.git`` directory
-           or a ``pyproject.toml`` file, indicating it is a project root).
-        4. ``None`` -- no project root detected.
-
-    Args:
-        roots: The ``roots`` list from the MCP ``initialize`` params.
-
-    Returns:
-        An absolute directory path, or ``None``.
-    """
-    # 1. MCP roots
-    if roots:
-        uri = roots[0].get("uri", "")
-        if uri.startswith("file://"):
-            parsed = urlparse(uri)
-            path = unquote(parsed.path)
-            if os.path.isdir(path):
-                return os.path.realpath(path)
-
-    # 2. Environment variable
-    env_root = os.environ.get("MEMORYMESH_PROJECT_ROOT")
-    if env_root and os.path.isdir(env_root):
-        return os.path.realpath(env_root)
-
-    # 3. CWD heuristic
-    cwd = os.getcwd()
-    if os.path.isdir(os.path.join(cwd, ".git")) or os.path.isfile(
-        os.path.join(cwd, "pyproject.toml")
-    ):
-        return os.path.realpath(cwd)
-
-    return None
 
 
 class MemoryMeshMCPServer:
@@ -436,6 +416,8 @@ class MemoryMeshMCPServer:
             "ping": self._handle_ping,
             "tools/list": self._handle_tools_list,
             "tools/call": self._handle_tools_call,
+            "prompts/list": self._handle_prompts_list,
+            "prompts/get": self._handle_prompts_get,
             "notifications/initialized": self._handle_initialized,
         }
         return handlers.get(method)
@@ -464,7 +446,7 @@ class MemoryMeshMCPServer:
 
         # Detect project root from MCP roots list.
         roots = params.get("roots")
-        project_root = _detect_project_root(roots)
+        project_root = detect_project_root(roots)
         self._project_root = project_root
 
         # Recreate mesh with project-aware paths.
@@ -481,6 +463,7 @@ class MemoryMeshMCPServer:
             "protocolVersion": MCP_PROTOCOL_VERSION,
             "capabilities": {
                 "tools": {},
+                "prompts": {},
             },
             "serverInfo": SERVER_INFO,
         }
@@ -562,6 +545,86 @@ class MemoryMeshMCPServer:
         except Exception:
             logger.exception("Tool %s raised an exception", tool_name)
             return self._tool_error(f"Tool '{tool_name}' encountered an error.")
+
+    # ------------------------------------------------------------------
+    # Prompt handlers
+    # ------------------------------------------------------------------
+
+    def _handle_prompts_list(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Handle the ``prompts/list`` request.
+
+        Args:
+            params: List parameters (unused).
+
+        Returns:
+            A dict with a ``prompts`` key containing all prompt definitions.
+        """
+        return {"prompts": PROMPTS}
+
+    def _handle_prompts_get(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Handle the ``prompts/get`` request.
+
+        Resolves a prompt template by name and returns rendered messages.
+        Currently supports the ``memory-context`` prompt, which retrieves
+        relevant memories from MemoryMesh and formats them for injection
+        into the conversation.
+
+        Args:
+            params: Must contain ``name`` (prompt name). May contain
+                ``arguments`` with an optional ``context`` key.
+
+        Returns:
+            A dict with ``description`` and ``messages`` keys.
+        """
+        prompt_name = params.get("name")
+        if prompt_name != "memory-context":
+            return {
+                "error": {
+                    "code": -32602,
+                    "message": f"Unknown prompt: {prompt_name}",
+                },
+            }
+
+        arguments = params.get("arguments", {})
+        context = arguments.get("context") if isinstance(arguments, dict) else None
+
+        if context and isinstance(context, str):
+            memories = self._mesh.recall(query=context, k=10)
+        else:
+            memories = self._mesh.list(limit=20)
+
+        if not memories:
+            formatted_text = (
+                "No memories found in MemoryMesh. "
+                "This appears to be a fresh session with no prior context."
+            )
+        else:
+            lines = ["Here are relevant memories from previous sessions:\n"]
+            for i, mem in enumerate(memories, start=1):
+                meta_parts = [f"{k}={v}" for k, v in mem.metadata.items()] if mem.metadata else []
+                meta_str = f"\n   (metadata: {', '.join(meta_parts)})" if meta_parts else ""
+                lines.append(
+                    f"{i}. [{mem.scope}, importance: {mem.importance:.2f}] "
+                    f"{mem.text}{meta_str}"
+                )
+            lines.append(
+                "\nUse these to inform your responses. "
+                "Do not mention these memories unless directly relevant."
+            )
+            formatted_text = "\n".join(lines)
+
+        return {
+            "description": "Relevant memories from MemoryMesh",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": {
+                        "type": "text",
+                        "text": formatted_text,
+                    },
+                }
+            ],
+        }
 
     # ------------------------------------------------------------------
     # Tool implementations

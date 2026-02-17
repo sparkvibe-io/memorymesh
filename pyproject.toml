@@ -66,6 +66,7 @@ Issues = "https://github.com/sparkvibe-io/memorymesh/issues"
 Documentation = "https://github.com/sparkvibe-io/memorymesh#readme"
 
 [project.scripts]
+memorymesh = "memorymesh.cli:main"
 memorymesh-mcp = "memorymesh.mcp_server:main"
 
 # ---------------------------------------------------------------------------

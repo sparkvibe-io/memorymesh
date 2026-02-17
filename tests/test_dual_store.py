@@ -11,7 +11,6 @@ import os
 import pytest
 
 from memorymesh import MemoryMesh
-from memorymesh.mcp_server import _detect_project_root
 from memorymesh.memory import (
     GLOBAL_SCOPE,
     PROJECT_SCOPE,
@@ -19,6 +18,7 @@ from memorymesh.memory import (
     validate_scope,
 )
 from memorymesh.store import (
+    detect_project_root,
     migrate_legacy_db,
 )
 
@@ -396,30 +396,30 @@ class TestDualStoreList:
 
 
 class TestProjectDetection:
-    """_detect_project_root() heuristics."""
+    """detect_project_root() heuristics."""
 
     def test_detect_from_mcp_roots(self, tmp_path):
         """Picks up the first file:// URI from roots."""
         roots = [{"uri": f"file://{tmp_path}"}]
-        assert _detect_project_root(roots) == os.path.realpath(str(tmp_path))
+        assert detect_project_root(roots) == os.path.realpath(str(tmp_path))
 
     def test_detect_from_env(self, tmp_path, monkeypatch):
         """Falls back to MEMORYMESH_PROJECT_ROOT env var."""
         monkeypatch.setenv("MEMORYMESH_PROJECT_ROOT", str(tmp_path))
-        assert _detect_project_root(None) == os.path.realpath(str(tmp_path))
+        assert detect_project_root(None) == os.path.realpath(str(tmp_path))
 
     def test_detect_from_cwd_git(self, tmp_path, monkeypatch):
         """Detects a project root when CWD has a .git directory."""
         (tmp_path / ".git").mkdir()
         monkeypatch.chdir(tmp_path)
         monkeypatch.delenv("MEMORYMESH_PROJECT_ROOT", raising=False)
-        assert _detect_project_root(None) == os.path.realpath(str(tmp_path))
+        assert detect_project_root(None) == os.path.realpath(str(tmp_path))
 
     def test_detect_none(self, tmp_path, monkeypatch):
         """Returns None when no project signals are present."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.delenv("MEMORYMESH_PROJECT_ROOT", raising=False)
-        assert _detect_project_root(None) is None
+        assert detect_project_root(None) is None
 
 
 # ------------------------------------------------------------------

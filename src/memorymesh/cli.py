@@ -1,0 +1,816 @@
+"""MemoryMesh CLI -- human-readable viewer and management tool for stored memories.
+
+Provides ``list``, ``search``, ``show``, ``stats``, ``export``, ``init``,
+``sync``, ``report``, and ``formats`` subcommands so that users can inspect,
+audit, and manage their memory stores without writing Python code.
+
+Uses **only the Python standard library** (argparse, shutil, json).
+The CLI never computes embeddings -- it instantiates MemoryMesh with
+``embedding="none"`` and only reads/displays data.
+
+Usage::
+
+    memorymesh list    [--scope project|global|all] [--limit N] [--offset N] [--format table|json]
+    memorymesh search  <query> [--scope ...] [--limit N]
+    memorymesh show    <memory_id>
+    memorymesh stats   [--scope project|global|all]
+    memorymesh export  [--format json|html] [--output FILE] [--scope project|global|all]
+    memorymesh init    [--skip-mcp] [--skip-claude-md] [--only FORMAT]
+    memorymesh sync    --to FILE | --from FILE [--format claude|codex|gemini|all] [--scope ...] [--limit N]
+    memorymesh report  [--scope project|global|all]
+    memorymesh formats [--installed]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import sys
+from typing import Any
+
+from .core import MemoryMesh
+from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory
+from .store import detect_project_root
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_mesh(args: argparse.Namespace) -> MemoryMesh:
+    """Build a read-only MemoryMesh from CLI arguments.
+
+    Uses ``embedding="none"`` since the CLI never needs to compute
+    embeddings.
+
+    Args:
+        args: Parsed CLI arguments (may contain ``project_path`` and
+            ``global_path`` overrides).
+
+    Returns:
+        A configured :class:`MemoryMesh` instance.
+    """
+    project_path = getattr(args, "project_path", None)
+    global_path = getattr(args, "global_path", None)
+
+    if project_path is None:
+        project_root = detect_project_root()
+        if project_root is not None:
+            candidate = os.path.join(project_root, ".memorymesh", "memories.db")
+            if os.path.isfile(candidate):
+                project_path = candidate
+
+    return MemoryMesh(
+        path=project_path,
+        global_path=global_path,
+        embedding="none",
+    )
+
+
+def _resolve_scope(scope_arg: str) -> str | None:
+    """Convert the CLI ``--scope`` string to an API scope value.
+
+    Args:
+        scope_arg: One of ``"project"``, ``"global"``, or ``"all"``.
+
+    Returns:
+        ``"project"``, ``"global"``, or ``None`` (meaning both).
+    """
+    if scope_arg == "all":
+        return None
+    return scope_arg
+
+
+def _format_timestamp(iso: str) -> str:
+    """Format an ISO timestamp to ``YYYY-MM-DD HH:MM``.
+
+    Args:
+        iso: An ISO-8601 datetime string.
+
+    Returns:
+        A short human-readable timestamp.
+    """
+    # Handle both "2026-02-16T15:30:00+00:00" and "2026-02-16T15:30:00"
+    return iso[:16].replace("T", " ")
+
+
+def _truncate(text: str, width: int) -> str:
+    """Truncate text to *width* characters, adding ``...`` if needed.
+
+    Args:
+        text: Input text.
+        width: Maximum output width.
+
+    Returns:
+        Truncated string.
+    """
+    if len(text) <= width:
+        return text
+    return text[: max(width - 3, 0)] + "..."
+
+
+def _memory_to_dict(mem: Memory) -> dict[str, Any]:
+    """Convert a Memory to a JSON-safe dict without embeddings.
+
+    Args:
+        mem: The memory to serialise.
+
+    Returns:
+        A dictionary suitable for JSON output.
+    """
+    d = mem.to_dict()
+    d.pop("embedding", None)
+    return d
+
+
+# ---------------------------------------------------------------------------
+# Subcommands
+# ---------------------------------------------------------------------------
+
+
+def _cmd_list(args: argparse.Namespace) -> int:
+    """Handle the ``list`` subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    mesh = _build_mesh(args)
+    scope = _resolve_scope(args.scope)
+    memories = mesh.list(limit=args.limit, offset=args.offset, scope=scope)
+    total = mesh.count(scope=scope)
+    mesh.close()
+
+    if args.format == "json":
+        output = [_memory_to_dict(m) for m in memories]
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+        return 0
+
+    # Table format
+    if not memories:
+        print("No memories found.")
+        return 0
+
+    term_width = shutil.get_terminal_size((80, 24)).columns
+    # Column widths: ID(8) + Scope(7) + Imp(4) + Hits(4) + Created(16) + gaps
+    fixed_width = 8 + 2 + 7 + 2 + 4 + 2 + 4 + 2 + 16 + 2
+    text_width = max(20, term_width - fixed_width)
+
+    # Header
+    header = (
+        f"{'ID':<8}  {'Scope':<7}  {'Imp.':>4}  {'Hits':>4}  "
+        f"{'Created':<16}  {'Text'}"
+    )
+    separator = (
+        f"{'─' * 8}  {'─' * 7}  {'─' * 4}  {'─' * 4}  "
+        f"{'─' * 16}  {'─' * text_width}"
+    )
+    print(header)
+    print(separator)
+
+    for mem in memories:
+        text_preview = _truncate(
+            mem.text.replace("\n", " "), text_width
+        )
+        ts = _format_timestamp(mem.created_at.isoformat())
+        print(
+            f"{mem.id[:8]:<8}  {mem.scope:<7}  {mem.importance:4.2f}  "
+            f"{mem.access_count:3d}x  {ts:<16}  {text_preview}"
+        )
+
+    scope_label = args.scope if args.scope != "all" else "all"
+    print(f"\nShowing {len(memories)} of {total} memories (scope: {scope_label})")
+    return 0
+
+
+def _cmd_search(args: argparse.Namespace) -> int:
+    """Handle the ``search`` subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    mesh = _build_mesh(args)
+    scope = _resolve_scope(args.scope)
+    # Use recall with scope filtering -- with embedding="none" this does
+    # keyword (LIKE) search across both stores.
+    memories = mesh.recall(query=args.query, k=args.limit, scope=scope)
+    mesh.close()
+
+    if not memories:
+        print(f'No memories found matching "{args.query}".')
+        return 0
+
+    term_width = shutil.get_terminal_size((80, 24)).columns
+    fixed_width = 8 + 2 + 7 + 2 + 4 + 2
+    text_width = max(20, term_width - fixed_width)
+
+    header = f"{'ID':<8}  {'Scope':<7}  {'Imp.':>4}  {'Text'}"
+    separator = f"{'─' * 8}  {'─' * 7}  {'─' * 4}  {'─' * text_width}"
+    print(header)
+    print(separator)
+
+    for mem in memories:
+        text_preview = _truncate(mem.text.replace("\n", " "), text_width)
+        print(
+            f"{mem.id[:8]:<8}  {mem.scope:<7}  {mem.importance:4.2f}  "
+            f"{text_preview}"
+        )
+
+    print(f'\n{len(memories)} result(s) for "{args.query}"')
+    return 0
+
+
+def _cmd_show(args: argparse.Namespace) -> int:
+    """Handle the ``show`` subcommand.
+
+    Supports partial ID matching (prefix of 6+ characters).
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success, 1 for errors).
+    """
+    mesh = _build_mesh(args)
+    prefix = args.memory_id
+
+    # Try exact match first.
+    mem = mesh.get(prefix)
+    if mem is None:
+        # Partial ID match -- scan all memories.
+        all_memories = mesh.list(limit=100_000, scope=None)
+        matches = [m for m in all_memories if m.id.startswith(prefix)]
+        if len(matches) == 0:
+            print(f"Error: No memory found with ID prefix '{prefix}'.", file=sys.stderr)
+            mesh.close()
+            return 1
+        if len(matches) > 1:
+            print(
+                f"Error: Ambiguous ID prefix '{prefix}' matches {len(matches)} memories:",
+                file=sys.stderr,
+            )
+            for m in matches[:5]:
+                print(f"  {m.id}  {_truncate(m.text, 50)}", file=sys.stderr)
+            mesh.close()
+            return 1
+        mem = matches[0]
+
+    mesh.close()
+
+    # Display full detail.
+    emb = mem.embedding
+    has_embedding = emb is not None and len(emb) > 0
+    emb_info = f"Yes ({len(emb)} dimensions)" if has_embedding and emb else "No"
+
+    meta_str = json.dumps(mem.metadata, indent=2, ensure_ascii=False) if mem.metadata else "{}"
+
+    print(f"Memory {mem.id}")
+    print("─" * 40)
+    print(f"{'Scope:':<15}{mem.scope}")
+    print(f"{'Importance:':<15}{mem.importance:.2f}")
+    print(f"{'Decay Rate:':<15}{mem.decay_rate:.2f}")
+    print(f"{'Access Count:':<15}{mem.access_count}")
+    print(f"{'Created:':<15}{mem.created_at.isoformat()}")
+    print(f"{'Updated:':<15}{mem.updated_at.isoformat()}")
+    print(f"{'Metadata:':<15}{meta_str}")
+    print(f"{'Has Embedding:':<15}{emb_info}")
+    print()
+    print("Text:")
+    # Indent the text by 2 spaces.
+    for line in mem.text.splitlines():
+        print(f"  {line}")
+    return 0
+
+
+def _cmd_stats(args: argparse.Namespace) -> int:
+    """Handle the ``stats`` subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    mesh = _build_mesh(args)
+    scope = _resolve_scope(args.scope)
+
+    if scope is None:
+        # Show stats for all scopes.
+        proj_count = mesh.count(scope=PROJECT_SCOPE)
+        glob_count = mesh.count(scope=GLOBAL_SCOPE)
+        total = proj_count + glob_count
+
+        proj_oldest, proj_newest = mesh.get_time_range(scope=PROJECT_SCOPE)
+        glob_oldest, glob_newest = mesh.get_time_range(scope=GLOBAL_SCOPE)
+
+        print("MemoryMesh Statistics")
+        print("─" * 40)
+        print(f"{'Project memories:':<25}{proj_count}")
+        print(f"{'Global memories:':<25}{glob_count}")
+        print(f"{'Total:':<25}{total}")
+        if proj_oldest:
+            print(f"{'Project oldest:':<25}{_format_timestamp(proj_oldest)}")
+            print(f"{'Project newest:':<25}{_format_timestamp(proj_newest)}")  # type: ignore[arg-type]
+        if glob_oldest:
+            print(f"{'Global oldest:':<25}{_format_timestamp(glob_oldest)}")
+            print(f"{'Global newest:':<25}{_format_timestamp(glob_newest)}")  # type: ignore[arg-type]
+    else:
+        count = mesh.count(scope=scope)
+        oldest, newest = mesh.get_time_range(scope=scope)
+        print(f"MemoryMesh Statistics ({scope})")
+        print("─" * 40)
+        print(f"{'Memories:':<25}{count}")
+        if oldest:
+            print(f"{'Oldest:':<25}{_format_timestamp(oldest)}")
+            print(f"{'Newest:':<25}{_format_timestamp(newest)}")  # type: ignore[arg-type]
+
+    mesh.close()
+    return 0
+
+
+def _cmd_export(args: argparse.Namespace) -> int:
+    """Handle the ``export`` subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    mesh = _build_mesh(args)
+    scope = _resolve_scope(args.scope)
+    memories = mesh.list(limit=100_000, scope=scope)
+
+    if args.format == "json":
+        output = [_memory_to_dict(m) for m in memories]
+        content = json.dumps(output, indent=2, ensure_ascii=False)
+    else:
+        # HTML export
+        from .html_export import generate_html
+
+        content = generate_html(
+            memories=memories,
+            title="MemoryMesh Export",
+            project_path=mesh.project_path,
+            global_path=mesh.global_path,
+        )
+
+    mesh.close()
+
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"Exported {len(memories)} memories to {args.output}")
+    else:
+        print(content)
+
+    return 0
+
+
+def _cmd_init(args: argparse.Namespace) -> int:
+    """Handle the ``init`` subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success, 1 for errors).
+    """
+    from .init_cmd import run_init
+
+    return run_init(
+        project_path=getattr(args, "project_path", None),
+        skip_mcp=args.skip_mcp,
+        skip_claude_md=args.skip_claude_md,
+        only=getattr(args, "only", None),
+    )
+
+
+def _cmd_sync(args: argparse.Namespace) -> int:
+    """Handle the ``sync`` subcommand.
+
+    Supports ``--format`` to select the adapter (claude, codex, gemini, all).
+    Default is ``claude`` for backward compatibility.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success, 1 for errors).
+    """
+    fmt = getattr(args, "sync_format", "claude")
+
+    if args.to_file and args.from_file:
+        print("Error: Cannot use both --to and --from at the same time.", file=sys.stderr)
+        return 1
+
+    if not args.to_file and not args.from_file:
+        print("Error: Specify either --to FILE or --from FILE.", file=sys.stderr)
+        return 1
+
+    if fmt == "all" and args.from_file:
+        print("Error: --format all is only supported for export (--to).", file=sys.stderr)
+        return 1
+
+    mesh = _build_mesh(args)
+    scope = _resolve_scope(args.scope)
+
+    if fmt == "all":
+        # Sync to all detected formats.
+        from .formats import sync_to_all
+
+        output_path = args.to_file
+        if output_path == "auto":
+            results = sync_to_all(mesh, scope=scope, limit=args.limit)
+            for adapter_name, count in results.items():
+                print(f"Exported {count} memories ({adapter_name})")
+            if not results:
+                print("No installed formats detected.")
+        else:
+            # "all" with a specific path doesn't make sense
+            print("Error: --format all requires --to auto.", file=sys.stderr)
+            mesh.close()
+            return 1
+        mesh.close()
+        return 0
+
+    # Single format sync.
+    if fmt == "claude":
+        # Use the backward-compatible shim for claude.
+        from .sync import (
+            detect_memory_md_path,
+            sync_from_memory_md,
+            sync_to_memory_md,
+        )
+
+        if args.to_file:
+            output_path = args.to_file
+            if output_path == "auto":
+                detected = detect_memory_md_path()
+                if detected is None:
+                    print("Error: Could not auto-detect MEMORY.md location.", file=sys.stderr)
+                    mesh.close()
+                    return 1
+                output_path = detected
+            count = sync_to_memory_md(mesh, output_path, scope=scope, limit=args.limit)
+            print(f"Exported {count} memories to {output_path}")
+        else:
+            input_path = args.from_file
+            if input_path == "auto":
+                detected = detect_memory_md_path()
+                if detected is None:
+                    print("Error: Could not auto-detect MEMORY.md location.", file=sys.stderr)
+                    mesh.close()
+                    return 1
+                input_path = detected
+            import_scope = scope if scope is not None else "project"
+            count = sync_from_memory_md(mesh, input_path, scope=import_scope)
+            print(f"Imported {count} new memories from {input_path}")
+    else:
+        # Use the formats framework for codex/gemini.
+        from .formats import (
+            create_format_adapter,
+            sync_from_format,
+            sync_to_format,
+        )
+
+        adapter = create_format_adapter(fmt)
+
+        if args.to_file:
+            output_path = args.to_file
+            if output_path == "auto":
+                project_root = detect_project_root()
+                if project_root:
+                    detected = adapter.detect_project_path(project_root)
+                else:
+                    detected = adapter.detect_global_path()
+                if detected is None:
+                    print(
+                        f"Error: Could not auto-detect {fmt} file location.",
+                        file=sys.stderr,
+                    )
+                    mesh.close()
+                    return 1
+                output_path = detected
+            count = sync_to_format(
+                mesh, adapter, output_path, scope=scope, limit=args.limit
+            )
+            print(f"Exported {count} memories to {output_path}")
+        else:
+            input_path = args.from_file
+            if input_path == "auto":
+                project_root = detect_project_root()
+                if project_root:
+                    detected = adapter.detect_project_path(project_root)
+                else:
+                    detected = adapter.detect_global_path()
+                if detected is None:
+                    print(
+                        f"Error: Could not auto-detect {fmt} file location.",
+                        file=sys.stderr,
+                    )
+                    mesh.close()
+                    return 1
+                input_path = detected
+            import_scope = scope if scope is not None else "project"
+            count = sync_from_format(
+                mesh, adapter, input_path, scope=import_scope
+            )
+            print(f"Imported {count} new memories from {input_path}")
+
+    mesh.close()
+    return 0
+
+
+def _cmd_formats(args: argparse.Namespace) -> int:
+    """Handle the ``formats`` subcommand.
+
+    Lists all known format adapters with their install status.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    from .formats import get_all_adapters, get_installed_adapters
+
+    if args.installed:
+        adapters = get_installed_adapters()
+        if not adapters:
+            print("No installed format adapters detected.")
+            return 0
+        label = "Installed"
+    else:
+        adapters = get_all_adapters()
+        label = "All known"
+
+    print(f"{label} format adapters:")
+    print()
+
+    for adapter in adapters:
+        installed = adapter.is_installed()
+        status = "installed" if installed else "not detected"
+        files = ", ".join(adapter.file_names)
+        print(f"  {adapter.name:<10} {adapter.display_name:<25} {files:<15} [{status}]")
+
+    return 0
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    """Handle the ``report`` subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    from .report import generate_report
+
+    mesh = _build_mesh(args)
+    scope = _resolve_scope(args.scope)
+    report = generate_report(mesh, scope=scope)
+    mesh.close()
+    print(report)
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Argument parser
+# ---------------------------------------------------------------------------
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser.
+
+    Returns:
+        A configured :class:`argparse.ArgumentParser`.
+    """
+    parser = argparse.ArgumentParser(
+        prog="memorymesh",
+        description="MemoryMesh -- view and manage your AI memory stores.",
+    )
+    parser.add_argument(
+        "--project-path",
+        default=None,
+        help="Path to the project SQLite database file.",
+    )
+    parser.add_argument(
+        "--global-path",
+        default=None,
+        help="Path to the global SQLite database file.",
+    )
+
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # -- list ---------------------------------------------------------
+    p_list = subparsers.add_parser("list", help="List stored memories.")
+    p_list.add_argument(
+        "--scope",
+        choices=["project", "global", "all"],
+        default="all",
+        help="Scope to display (default: all).",
+    )
+    p_list.add_argument(
+        "--limit", type=int, default=20, help="Maximum memories to show (default: 20)."
+    )
+    p_list.add_argument(
+        "--offset", type=int, default=0, help="Number of memories to skip."
+    )
+    p_list.add_argument(
+        "--format",
+        choices=["table", "json"],
+        default="table",
+        help="Output format (default: table).",
+    )
+
+    # -- search -------------------------------------------------------
+    p_search = subparsers.add_parser("search", help="Search memories by keyword.")
+    p_search.add_argument("query", help="Search query text.")
+    p_search.add_argument(
+        "--scope",
+        choices=["project", "global", "all"],
+        default="all",
+        help="Scope to search (default: all).",
+    )
+    p_search.add_argument(
+        "--limit", type=int, default=10, help="Maximum results (default: 10)."
+    )
+
+    # -- show ---------------------------------------------------------
+    p_show = subparsers.add_parser(
+        "show", help="Show full detail for a memory (supports partial ID)."
+    )
+    p_show.add_argument(
+        "memory_id", help="Memory ID or prefix (first 6+ characters)."
+    )
+
+    # -- stats --------------------------------------------------------
+    p_stats = subparsers.add_parser("stats", help="Show memory statistics.")
+    p_stats.add_argument(
+        "--scope",
+        choices=["project", "global", "all"],
+        default="all",
+        help="Scope for statistics (default: all).",
+    )
+
+    # -- export -------------------------------------------------------
+    p_export = subparsers.add_parser(
+        "export", help="Export memories to JSON or HTML."
+    )
+    p_export.add_argument(
+        "--format",
+        choices=["json", "html"],
+        default="json",
+        help="Export format (default: json).",
+    )
+    p_export.add_argument(
+        "--output", "-o", default=None, help="Output file path (default: stdout)."
+    )
+    p_export.add_argument(
+        "--scope",
+        choices=["project", "global", "all"],
+        default="all",
+        help="Scope to export (default: all).",
+    )
+
+    # -- init ---------------------------------------------------------
+    p_init = subparsers.add_parser(
+        "init", help="Set up MemoryMesh for a project (MCP config + tool configs)."
+    )
+    p_init.add_argument(
+        "--project-path",
+        default=None,
+        help="Project root directory to initialize.",
+    )
+    p_init.add_argument(
+        "--skip-mcp",
+        action="store_true",
+        help="Skip Claude Code MCP configuration.",
+    )
+    p_init.add_argument(
+        "--skip-claude-md",
+        action="store_true",
+        help="Skip CLAUDE.md memory section injection.",
+    )
+    p_init.add_argument(
+        "--only",
+        choices=["claude", "codex", "gemini"],
+        default=None,
+        help="Only configure a specific tool (default: all detected).",
+    )
+
+    # -- sync ---------------------------------------------------------
+    p_sync = subparsers.add_parser(
+        "sync", help="Sync memories with AI tool markdown files."
+    )
+    p_sync.add_argument(
+        "--to",
+        dest="to_file",
+        default=None,
+        help='Export memories to a file. Use "auto" to detect location.',
+    )
+    p_sync.add_argument(
+        "--from",
+        dest="from_file",
+        default=None,
+        help='Import memories from a file. Use "auto" to detect location.',
+    )
+    p_sync.add_argument(
+        "--format",
+        dest="sync_format",
+        choices=["claude", "codex", "gemini", "all"],
+        default="claude",
+        help="Target format adapter (default: claude).",
+    )
+    p_sync.add_argument(
+        "--scope",
+        choices=["project", "global", "all"],
+        default="all",
+        help="Scope for sync (default: all).",
+    )
+    p_sync.add_argument(
+        "--limit", type=int, default=50, help="Maximum memories to export (default: 50)."
+    )
+
+    # -- formats ------------------------------------------------------
+    p_formats = subparsers.add_parser(
+        "formats", help="List known format adapters and install status."
+    )
+    p_formats.add_argument(
+        "--installed",
+        action="store_true",
+        help="Show only installed/detected tools.",
+    )
+
+    # -- report -------------------------------------------------------
+    p_report = subparsers.add_parser(
+        "report", help="Generate a memory analytics report."
+    )
+    p_report.add_argument(
+        "--scope",
+        choices=["project", "global", "all"],
+        default="all",
+        help="Scope for report (default: all).",
+    )
+
+    return parser
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point.
+
+    Args:
+        argv: Command-line arguments. Defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code (0 for success, non-zero for errors).
+    """
+    # Suppress library logging -- CLI output should be clean.
+    import logging
+
+    logging.getLogger("memorymesh").setLevel(logging.WARNING)
+
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    if args.command is None:
+        parser.print_help()
+        return 0
+
+    commands: dict[str, Any] = {
+        "list": _cmd_list,
+        "search": _cmd_search,
+        "show": _cmd_show,
+        "stats": _cmd_stats,
+        "export": _cmd_export,
+        "init": _cmd_init,
+        "sync": _cmd_sync,
+        "formats": _cmd_formats,
+        "report": _cmd_report,
+    }
+
+    handler = commands.get(args.command)
+    if handler is None:
+        parser.print_help()
+        return 1
+
+    result: int = handler(args)
+    return result
+
+
+if __name__ == "__main__":
+    sys.exit(main())

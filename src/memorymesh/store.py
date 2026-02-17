@@ -17,6 +17,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 from .memory import Memory
 
@@ -30,6 +31,46 @@ _DEFAULT_DB = os.path.join(_DEFAULT_DIR, "memories.db")
 _DEFAULT_GLOBAL_DIR = _DEFAULT_DIR
 _DEFAULT_GLOBAL_DB = os.path.join(_DEFAULT_GLOBAL_DIR, "global.db")
 _LEGACY_DB = _DEFAULT_DB
+
+
+def detect_project_root(roots: list[dict[str, Any]] | None = None) -> str | None:
+    """Detect the project root directory.
+
+    Priority:
+        1. First URI in *roots* (from the MCP ``initialize`` request).
+        2. ``MEMORYMESH_PROJECT_ROOT`` environment variable.
+        3. Current working directory (if it contains a ``.git`` directory
+           or a ``pyproject.toml`` file, indicating it is a project root).
+        4. ``None`` -- no project root detected.
+
+    Args:
+        roots: The ``roots`` list from the MCP ``initialize`` params.
+
+    Returns:
+        An absolute directory path, or ``None``.
+    """
+    # 1. MCP roots
+    if roots:
+        uri = roots[0].get("uri", "")
+        if uri.startswith("file://"):
+            parsed = urlparse(uri)
+            path = unquote(parsed.path)
+            if os.path.isdir(path):
+                return os.path.realpath(path)
+
+    # 2. Environment variable
+    env_root = os.environ.get("MEMORYMESH_PROJECT_ROOT")
+    if env_root and os.path.isdir(env_root):
+        return os.path.realpath(env_root)
+
+    # 3. CWD heuristic
+    cwd = os.getcwd()
+    if os.path.isdir(os.path.join(cwd, ".git")) or os.path.isfile(
+        os.path.join(cwd, "pyproject.toml")
+    ):
+        return os.path.realpath(cwd)
+
+    return None
 
 
 def migrate_legacy_db() -> bool:

@@ -32,10 +32,23 @@ from .embeddings import (
     OpenAIEmbedding,
     create_embedding_provider,
 )
+from .formats import (
+    FormatAdapter,
+    create_format_adapter,
+    get_all_adapters,
+    get_format_names,
+    get_installed_adapters,
+    sync_from_format,
+    sync_to_all,
+    sync_to_format,
+)
+from .html_export import generate_html
 from .mcp_server import MemoryMeshMCPServer
 from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory, validate_scope
 from .relevance import RelevanceEngine, RelevanceWeights
-from .store import MemoryStore
+from .report import generate_report
+from .store import MemoryStore, detect_project_root
+from .sync import sync_from_memory_md, sync_to_memory_md
 
 __all__ = [
     # Core
@@ -50,6 +63,7 @@ __all__ = [
     "validate_scope",
     # Storage
     "MemoryStore",
+    "detect_project_root",
     # Embeddings
     "EmbeddingProvider",
     "LocalEmbedding",
@@ -57,6 +71,22 @@ __all__ = [
     "OpenAIEmbedding",
     "NoopEmbedding",
     "create_embedding_provider",
+    # HTML Export
+    "generate_html",
+    # Sync (legacy)
+    "sync_to_memory_md",
+    "sync_from_memory_md",
+    # Formats (multi-format sync)
+    "FormatAdapter",
+    "create_format_adapter",
+    "get_all_adapters",
+    "get_installed_adapters",
+    "get_format_names",
+    "sync_to_format",
+    "sync_from_format",
+    "sync_to_all",
+    # Report
+    "generate_report",
     # Relevance
     "RelevanceEngine",
     "RelevanceWeights",
