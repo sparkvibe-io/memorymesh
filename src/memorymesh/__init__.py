@@ -23,6 +23,8 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 
+from .auto_importance import score_importance
+from .compaction import CompactionResult, compact
 from .core import MemoryMesh
 from .embeddings import (
     EmbeddingProvider,
@@ -32,6 +34,7 @@ from .embeddings import (
     OpenAIEmbedding,
     create_embedding_provider,
 )
+from .encryption import EncryptedMemoryStore, decrypt_field, derive_key, encrypt_field
 from .formats import (
     FormatAdapter,
     create_format_adapter,
@@ -51,6 +54,16 @@ from .store import MemoryStore, detect_project_root
 from .sync import sync_from_memory_md, sync_to_memory_md
 
 __all__ = [
+    # Auto-importance
+    "score_importance",
+    # Compaction
+    "compact",
+    "CompactionResult",
+    # Encryption
+    "EncryptedMemoryStore",
+    "derive_key",
+    "encrypt_field",
+    "decrypt_field",
     # Core
     "MemoryMesh",
     # MCP Server

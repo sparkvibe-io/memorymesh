@@ -1,4 +1,4 @@
-.PHONY: all install test lint format typecheck build clean
+.PHONY: all install test lint format typecheck build clean bench
 
 all: lint test typecheck
 
@@ -20,6 +20,9 @@ typecheck:
 
 build:
 	python -m build
+
+bench:
+	.venv/bin/python -m benchmarks.bench_memorymesh
 
 clean:
 	rm -rf dist/ build/ *.egg-info

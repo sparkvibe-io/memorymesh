@@ -583,6 +583,50 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_compact(args: argparse.Namespace) -> int:
+    """Handle the ``compact`` subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    mesh = _build_mesh(args)
+    scope = args.scope
+    threshold = args.threshold
+    dry_run = args.dry_run
+
+    result = mesh.compact(
+        scope=scope,
+        similarity_threshold=threshold,
+        dry_run=dry_run,
+    )
+    mesh.close()
+
+    if result.merged_count == 0:
+        print(f"No duplicates found (scope: {scope}, threshold: {threshold:.2f}).")
+        return 0
+
+    label = "Would merge" if dry_run else "Merged"
+    print(f"{label} {result.merged_count} pair(s) (scope: {scope})")
+    print()
+    for detail in result.details:
+        print(
+            f"  {detail['primary_id'][:8]} <- {detail['secondary_id'][:8]}  "
+            f"(similarity: {detail['similarity']:.2f})"
+        )
+        preview = _truncate(detail["merged_text_preview"].replace("\n", " "), 60)
+        print(f"    {preview}")
+
+    if dry_run:
+        print("\nDry run -- no changes made. Use without --dry-run to apply.")
+    else:
+        print(f"\nDeleted {len(result.deleted_ids)} redundant memories.")
+
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
@@ -762,6 +806,28 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Scope for report (default: all).",
     )
 
+    # -- compact ------------------------------------------------------
+    p_compact = subparsers.add_parser(
+        "compact", help="Merge duplicate and near-duplicate memories."
+    )
+    p_compact.add_argument(
+        "--scope",
+        choices=["project", "global"],
+        default="project",
+        help="Scope to compact (default: project).",
+    )
+    p_compact.add_argument(
+        "--threshold",
+        type=float,
+        default=0.85,
+        help="Similarity threshold for duplicate detection (default: 0.85).",
+    )
+    p_compact.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be merged without making changes.",
+    )
+
     return parser
 
 
@@ -801,6 +867,7 @@ def main(argv: list[str] | None = None) -> int:
         "sync": _cmd_sync,
         "formats": _cmd_formats,
         "report": _cmd_report,
+        "compact": _cmd_compact,
     }
 
     handler = commands.get(args.command)

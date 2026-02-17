@@ -59,6 +59,9 @@ class Memory:
         importance: User-assigned importance score in the range ``[0, 1]``.
         decay_rate: Rate at which importance decays over time.  Higher values
             cause faster forgetting.  ``0`` means the memory never decays.
+        session_id: Optional session/episode identifier for grouping memories
+            by conversation or task.  ``None`` for memories not tied to a
+            specific session.
         scope: Which store this memory belongs to (``"project"`` or
             ``"global"``).  Set dynamically by the core layer; not persisted
             as a database column.
@@ -73,6 +76,7 @@ class Memory:
     access_count: int = 0
     importance: float = 0.5
     decay_rate: float = 0.01
+    session_id: str | None = None
     scope: str = PROJECT_SCOPE
 
     # ------------------------------------------------------------------
@@ -133,6 +137,9 @@ class Memory:
 
         # Default scope for backward compatibility with older data.
         d.setdefault("scope", PROJECT_SCOPE)
+
+        # Default session_id for backward compatibility.
+        d.setdefault("session_id", None)
 
         return cls(**d)
 

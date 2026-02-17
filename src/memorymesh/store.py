@@ -244,8 +244,8 @@ class MemoryStore:
                 INSERT OR REPLACE INTO memories
                     (id, text, metadata_json, embedding_blob,
                      created_at, updated_at, access_count,
-                     importance, decay_rate)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     importance, decay_rate, session_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     memory.id,
@@ -257,6 +257,7 @@ class MemoryStore:
                     memory.access_count,
                     memory.importance,
                     memory.decay_rate,
+                    memory.session_id,
                 ),
             )
 
@@ -361,6 +362,66 @@ class MemoryStore:
             rows = cur.fetchall()
         return [self._row_to_memory(r) for r in rows]
 
+    def get_by_session(self, session_id: str, limit: int = 100) -> list[Memory]:
+        """Retrieve all memories belonging to a specific session.
+
+        Args:
+            session_id: The session identifier to filter by.
+            limit: Maximum number of results.
+
+        Returns:
+            A list of :class:`Memory` objects ordered by creation time.
+        """
+        with self._cursor() as cur:
+            cur.execute(
+                """
+                SELECT * FROM memories
+                WHERE session_id = ?
+                ORDER BY created_at ASC
+                LIMIT ?
+                """,
+                (session_id, limit),
+            )
+            rows = cur.fetchall()
+        return [self._row_to_memory(r) for r in rows]
+
+    def list_sessions(self, limit: int = 50) -> list[dict[str, Any]]:
+        """List distinct sessions with summary statistics.
+
+        Args:
+            limit: Maximum number of sessions to return.
+
+        Returns:
+            A list of dicts with keys ``session_id``, ``count``,
+            ``first_at``, and ``last_at``, ordered by most recent
+            session first.
+        """
+        with self._cursor() as cur:
+            cur.execute(
+                """
+                SELECT session_id,
+                       COUNT(*) AS cnt,
+                       MIN(created_at) AS first_at,
+                       MAX(created_at) AS last_at
+                FROM memories
+                WHERE session_id IS NOT NULL
+                GROUP BY session_id
+                ORDER BY last_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            rows = cur.fetchall()
+        return [
+            {
+                "session_id": row["session_id"],
+                "count": row["cnt"],
+                "first_at": row["first_at"],
+                "last_at": row["last_at"],
+            }
+            for row in rows
+        ]
+
     def count(self) -> int:
         """Return the total number of stored memories.
 
@@ -442,6 +503,7 @@ class MemoryStore:
             access_count=row["access_count"],
             importance=row["importance"],
             decay_rate=row["decay_rate"],
+            session_id=row["session_id"],
         )
 
     # ------------------------------------------------------------------

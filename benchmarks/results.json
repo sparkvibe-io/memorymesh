@@ -1,0 +1,213 @@
+{
+  "python_version": "3.13.2",
+  "embedding": "none",
+  "timestamp": "2026-02-17T02:14:06Z",
+  "remember_throughput": [
+    {
+      "n": 10,
+      "total_seconds": 0.000727,
+      "per_op_seconds": 7.267e-05
+    },
+    {
+      "n": 100,
+      "total_seconds": 0.007159,
+      "per_op_seconds": 7.159e-05
+    },
+    {
+      "n": 1000,
+      "total_seconds": 0.05163,
+      "per_op_seconds": 5.163e-05
+    },
+    {
+      "n": 5000,
+      "total_seconds": 0.252575,
+      "per_op_seconds": 5.051e-05
+    }
+  ],
+  "recall_latency": [
+    {
+      "store_size": 10,
+      "results": [
+        {
+          "k": 5,
+          "avg_seconds": 4.2e-05,
+          "queries": 5
+        },
+        {
+          "k": 10,
+          "avg_seconds": 2.9e-05,
+          "queries": 5
+        },
+        {
+          "k": 20,
+          "avg_seconds": 2.6e-05,
+          "queries": 5
+        }
+      ]
+    },
+    {
+      "store_size": 100,
+      "results": [
+        {
+          "k": 5,
+          "avg_seconds": 8.6e-05,
+          "queries": 5
+        },
+        {
+          "k": 10,
+          "avg_seconds": 0.00012,
+          "queries": 5
+        },
+        {
+          "k": 20,
+          "avg_seconds": 0.000121,
+          "queries": 5
+        }
+      ]
+    },
+    {
+      "store_size": 1000,
+      "results": [
+        {
+          "k": 5,
+          "avg_seconds": 0.000195,
+          "queries": 5
+        },
+        {
+          "k": 10,
+          "avg_seconds": 0.000241,
+          "queries": 5
+        },
+        {
+          "k": 20,
+          "avg_seconds": 0.000287,
+          "queries": 5
+        }
+      ]
+    },
+    {
+      "store_size": 5000,
+      "results": [
+        {
+          "k": 5,
+          "avg_seconds": 0.000637,
+          "queries": 5
+        },
+        {
+          "k": 10,
+          "avg_seconds": 0.000635,
+          "queries": 5
+        },
+        {
+          "k": 20,
+          "avg_seconds": 0.000691,
+          "queries": 5
+        }
+      ]
+    }
+  ],
+  "forget_latency": [
+    {
+      "store_size": 100,
+      "delete_count": 10,
+      "total_seconds": 0.000535,
+      "per_op_seconds": 5.35e-05
+    },
+    {
+      "store_size": 1000,
+      "delete_count": 100,
+      "total_seconds": 0.004268,
+      "per_op_seconds": 4.268e-05
+    },
+    {
+      "store_size": 5000,
+      "delete_count": 500,
+      "total_seconds": 0.020139,
+      "per_op_seconds": 4.028e-05
+    }
+  ],
+  "list_pagination": [
+    {
+      "page_size": 10,
+      "pages": 100,
+      "total_seconds": 0.002766,
+      "per_page_seconds": 2.766e-05
+    },
+    {
+      "page_size": 50,
+      "pages": 20,
+      "total_seconds": 0.002128,
+      "per_page_seconds": 0.00010641
+    },
+    {
+      "page_size": 100,
+      "pages": 10,
+      "total_seconds": 0.003088,
+      "per_page_seconds": 0.00030878
+    }
+  ],
+  "concurrent": {
+    "threads": 4,
+    "ops_per_thread": 50,
+    "wall_seconds": 0.053633,
+    "total_ops": 200,
+    "throughput_ops_per_sec": 3729.1,
+    "avg_remember_seconds": 0.00044721,
+    "avg_recall_seconds": 0.00077808,
+    "errors": 0
+  },
+  "store_size": [
+    {
+      "n": 10,
+      "total_bytes": 49152,
+      "per_memory_bytes": 4915
+    },
+    {
+      "n": 100,
+      "total_bytes": 73728,
+      "per_memory_bytes": 737
+    },
+    {
+      "n": 1000,
+      "total_bytes": 434176,
+      "per_memory_bytes": 434
+    },
+    {
+      "n": 5000,
+      "total_bytes": 2007040,
+      "per_memory_bytes": 401
+    }
+  ],
+  "auto_importance": {
+    "score_only": {
+      "n": 1000,
+      "total_seconds": 0.008814,
+      "per_op_seconds": 8.81e-06
+    },
+    "remember_with_auto": {
+      "n": 500,
+      "total_seconds": 0.032608,
+      "per_op_seconds": 6.522e-05
+    }
+  },
+  "compaction": {
+    "memories_before": 200,
+    "memories_after": 100,
+    "merged_count": 100,
+    "compact_seconds": 0.045097,
+    "dry_run_seconds": 0.035618,
+    "recall_before_seconds": 4.6e-05,
+    "recall_after_seconds": 3.8e-05
+  },
+  "episodic": {
+    "n_sessions": 10,
+    "memories_per_session": 50,
+    "total_memories": 500,
+    "remember_seconds": 0.027067,
+    "get_session_seconds": 0.001191,
+    "get_session_per_call_seconds": 0.00011907,
+    "list_sessions_avg_seconds": 5.111e-05,
+    "recall_with_session_avg_seconds": 8.902e-05
+  },
+  "total_seconds": 1.68
+}

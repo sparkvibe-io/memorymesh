@@ -10,6 +10,8 @@ import logging
 import os
 from typing import Any
 
+from .auto_importance import score_importance
+from .compaction import CompactionResult
 from .embeddings import EmbeddingProvider, NoopEmbedding, create_embedding_provider
 from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory, validate_scope
 from .relevance import RelevanceEngine, RelevanceWeights
@@ -49,6 +51,11 @@ class MemoryMesh:
             :class:`EmbeddingProvider` instance for full control.
         relevance_weights: Optional :class:`RelevanceWeights` to tune
             how memories are ranked during recall.
+        encryption_key: Optional passphrase for encrypting memory data
+            at rest.  When provided, the ``text`` and ``metadata`` fields
+            are encrypted before being written to SQLite.  Uses
+            PBKDF2-HMAC-SHA256 key derivation with a per-database salt.
+            ``None`` (default) disables encryption.
         **kwargs: Extra options forwarded to the embedding provider
             constructor.  Common keys:
 
@@ -68,6 +75,7 @@ class MemoryMesh:
         global_path: str | os.PathLike[str] | None = None,
         embedding: str | EmbeddingProvider = "local",
         relevance_weights: RelevanceWeights | None = None,
+        encryption_key: str | None = None,
         **kwargs: Any,
     ) -> None:
         # -- Legacy migration --------------------------------------------
@@ -76,6 +84,18 @@ class MemoryMesh:
         # -- Storage (dual-store) ----------------------------------------
         self._project_store: MemoryStore | None = MemoryStore(path=path) if path else None
         self._global_store = MemoryStore(path=global_path or _DEFAULT_GLOBAL_DB)
+
+        # -- Optional encryption -----------------------------------------
+        if encryption_key is not None:
+            from .encryption import EncryptedMemoryStore
+
+            if self._project_store is not None:
+                self._project_store = EncryptedMemoryStore(  # type: ignore[assignment]
+                    self._project_store, encryption_key
+                )
+            self._global_store = EncryptedMemoryStore(  # type: ignore[assignment]
+                self._global_store, encryption_key
+            )
 
         # -- Embedding provider ------------------------------------------
         if isinstance(embedding, EmbeddingProvider):
@@ -118,6 +138,8 @@ class MemoryMesh:
         importance: float = 0.5,
         decay_rate: float = 0.01,
         scope: str = PROJECT_SCOPE,
+        auto_importance: bool = False,
+        session_id: str | None = None,
     ) -> str:
         """Store a new memory.
 
@@ -129,6 +151,10 @@ class MemoryMesh:
             decay_rate: Rate at which importance decays over time.
                 ``0`` means the memory never decays.
             scope: ``"project"`` (default) or ``"global"``.
+            auto_importance: If ``True``, override *importance* with a
+                heuristic score computed from the text content.
+            session_id: Optional session/episode identifier for grouping
+                memories by conversation or task.
 
         Returns:
             The unique ID of the newly created memory.
@@ -140,6 +166,9 @@ class MemoryMesh:
         validate_scope(scope)
         store = self._store_for_scope(scope)
 
+        if auto_importance:
+            importance = score_importance(text, metadata)
+
         # Compute embedding (may be empty list for NoopEmbedding).
         emb = self._safe_embed(text)
 
@@ -149,15 +178,17 @@ class MemoryMesh:
             embedding=emb if emb else None,
             importance=importance,
             decay_rate=decay_rate,
+            session_id=session_id,
             scope=scope,
         )
 
         store.save(memory)
         logger.debug(
-            "Remembered memory %s (%d chars, scope=%s)",
+            "Remembered memory %s (%d chars, scope=%s, session=%s)",
             memory.id,
             len(text),
             scope,
+            session_id,
         )
         return memory.id
 
@@ -167,6 +198,7 @@ class MemoryMesh:
         k: int = 5,
         min_relevance: float = 0.0,
         scope: str | None = None,
+        session_id: str | None = None,
     ) -> list[Memory]:
         """Recall the most relevant memories for a query.
 
@@ -175,6 +207,10 @@ class MemoryMesh:
         Falls back to keyword search when the embedding provider is
         :class:`NoopEmbedding`.
 
+        When *session_id* is provided, memories from the same session
+        receive a temporary importance boost so that in-session context
+        is preferred.
+
         Args:
             query: Natural-language query describing what you want to
                 recall.
@@ -182,6 +218,8 @@ class MemoryMesh:
             min_relevance: Discard results scoring below this threshold.
             scope: ``"project"``, ``"global"``, or ``None`` (default)
                 to search both stores.
+            session_id: Optional session identifier.  When set, memories
+                belonging to the same session are boosted in ranking.
 
         Returns:
             Up to *k* :class:`Memory` objects sorted by descending
@@ -217,6 +255,15 @@ class MemoryMesh:
         # Apply time-based decay before ranking.
         self._engine.apply_decay(candidates)
 
+        # Boost same-session memories by temporarily increasing importance.
+        session_boost = 0.15
+        boosted_ids: set[str] = set()
+        if session_id:
+            for mem in candidates:
+                if mem.session_id == session_id:
+                    mem.importance = min(1.0, mem.importance + session_boost)
+                    boosted_ids.add(mem.id)
+
         # Rank and return top-k.
         results = self._engine.rank(
             candidates,
@@ -224,6 +271,11 @@ class MemoryMesh:
             k=k,
             min_relevance=min_relevance,
         )
+
+        # Restore boosted importance so the persisted value is unchanged.
+        for mem in results:
+            if mem.id in boosted_ids:
+                mem.importance = max(0.0, mem.importance - session_boost)
 
         # Update access counts for returned memories.
         for mem in results:
@@ -409,6 +461,110 @@ class MemoryMesh:
         oldest = min(oldest_vals) if oldest_vals else None
         newest = max(newest_vals) if newest_vals else None
         return (oldest, newest)
+
+    def get_session(
+        self,
+        session_id: str,
+        scope: str | None = None,
+    ) -> list[Memory]:
+        """Retrieve all memories belonging to a specific session.
+
+        Args:
+            session_id: The session identifier to filter by.
+            scope: ``"project"``, ``"global"``, or ``None`` (default)
+                to search both stores.
+
+        Returns:
+            A list of :class:`Memory` objects ordered by creation time.
+        """
+        results: list[Memory] = []
+
+        if scope in (None, PROJECT_SCOPE) and self._project_store:
+            mems = self._project_store.get_by_session(session_id)
+            for m in mems:
+                m.scope = PROJECT_SCOPE
+            results.extend(mems)
+
+        if scope in (None, GLOBAL_SCOPE):
+            mems = self._global_store.get_by_session(session_id)
+            for m in mems:
+                m.scope = GLOBAL_SCOPE
+            results.extend(mems)
+
+        results.sort(key=lambda m: m.created_at)
+        return results
+
+    def list_sessions(
+        self,
+        scope: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """List distinct sessions with summary statistics.
+
+        Args:
+            scope: ``"project"``, ``"global"``, or ``None`` (default)
+                to merge sessions from both stores.
+            limit: Maximum number of sessions to return.
+
+        Returns:
+            A list of dicts with keys ``session_id``, ``count``,
+            ``first_at``, ``last_at``, and ``scope``, ordered by most
+            recent session first.
+        """
+        results: list[dict[str, Any]] = []
+
+        if scope in (None, PROJECT_SCOPE) and self._project_store:
+            sessions = self._project_store.list_sessions(limit=limit)
+            for s in sessions:
+                s["scope"] = PROJECT_SCOPE
+            results.extend(sessions)
+
+        if scope in (None, GLOBAL_SCOPE):
+            sessions = self._global_store.list_sessions(limit=limit)
+            for s in sessions:
+                s["scope"] = GLOBAL_SCOPE
+            results.extend(sessions)
+
+        # Sort by most recent first and trim to limit.
+        results.sort(key=lambda s: s["last_at"], reverse=True)
+        return results[:limit]
+
+    def compact(
+        self,
+        scope: str = PROJECT_SCOPE,
+        similarity_threshold: float = 0.85,
+        dry_run: bool = False,
+    ) -> CompactionResult:
+        """Compact memories by merging duplicates and near-duplicates.
+
+        Scans all memories in the given scope, finds pairs that exceed
+        the similarity threshold, and merges them.  The primary memory
+        (higher importance or older) is kept; the secondary is deleted.
+
+        Args:
+            scope: ``"project"`` or ``"global"``.  Only one scope is
+                compacted per call.
+            similarity_threshold: Minimum text similarity to consider
+                two memories as duplicates.  Default is ``0.85``.
+            dry_run: If ``True``, compute the compaction plan but do
+                not actually merge or delete anything.
+
+        Returns:
+            A :class:`CompactionResult` describing what was (or would
+            be) merged.
+
+        Raises:
+            RuntimeError: If *scope* is ``"project"`` but no project
+                database is configured.
+        """
+        from .compaction import compact as _compact
+
+        return _compact(
+            self,
+            scope=scope,
+            similarity_threshold=similarity_threshold,
+            dry_run=dry_run,
+        )
 
     # ------------------------------------------------------------------
     # Context manager

@@ -54,7 +54,8 @@ _FULL_SCHEMA: list[str] = [
         updated_at     TEXT    NOT NULL,
         access_count   INTEGER NOT NULL DEFAULT 0,
         importance     REAL    NOT NULL DEFAULT 0.5,
-        decay_rate     REAL    NOT NULL DEFAULT 0.01
+        decay_rate     REAL    NOT NULL DEFAULT 0.01,
+        session_id     TEXT
     );
     """,
     """
@@ -64,6 +65,10 @@ _FULL_SCHEMA: list[str] = [
     """
     CREATE INDEX IF NOT EXISTS idx_memories_updated_at
     ON memories (updated_at DESC);
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_memories_session_id
+    ON memories (session_id);
     """,
 ]
 
@@ -76,6 +81,14 @@ MIGRATIONS: list[Migration] = [
         version=1,
         description="Initial schema (v0.1.0)",
         statements=[],  # Schema already exists for both fresh and pre-migration DBs
+    ),
+    Migration(
+        version=2,
+        description="Add session_id column for episodic memory",
+        statements=[
+            "ALTER TABLE memories ADD COLUMN session_id TEXT",
+            "CREATE INDEX IF NOT EXISTS idx_memories_session_id ON memories (session_id)",
+        ],
     ),
 ]
 
