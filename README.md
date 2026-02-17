@@ -147,13 +147,13 @@ response = openai_client.chat.completions.create(
 
 | Guide | Description |
 |---|---|
-| **[Configuration](docs/configuration.md)** | Embedding providers, Ollama setup, all constructor options |
-| **[MCP Server](docs/mcp-server.md)** | Setup for Claude Code, Cursor, Windsurf + teaching your AI to use memory |
-| **[Multi-Tool Sync](docs/multi-tool-sync.md)** | Sync memories across Claude, Codex, and Gemini CLI |
-| **[CLI Reference](docs/cli.md)** | Terminal commands for inspecting and managing memories |
-| **[API Reference](docs/api.md)** | Full Python API with all methods and parameters |
-| **[Architecture](docs/architecture.md)** | System design, dual-store pattern, and schema migrations |
-| **[FAQ](docs/faq.md)** | Common questions answered |
+| **[Configuration](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/configuration.md)** | Embedding providers, Ollama setup, all constructor options |
+| **[MCP Server](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/mcp-server.md)** | Setup for Claude Code, Cursor, Windsurf + teaching your AI to use memory |
+| **[Multi-Tool Sync](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/multi-tool-sync.md)** | Sync memories across Claude, Codex, and Gemini CLI |
+| **[CLI Reference](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/cli.md)** | Terminal commands for inspecting and managing memories |
+| **[API Reference](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/api.md)** | Full Python API with all methods and parameters |
+| **[Architecture](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/architecture.md)** | System design, dual-store pattern, and schema migrations |
+| **[FAQ](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/faq.md)** | Common questions answered |
 
 ---
 
@@ -188,13 +188,13 @@ response = openai_client.chat.completions.create(
 
 ## Contributing
 
-We welcome contributions from everyone. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started.
+We welcome contributions from everyone. See [CONTRIBUTING.md](https://github.com/sparkvibe-io/memorymesh/blob/main/CONTRIBUTING.md) for guidelines on how to get started.
 
 ---
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for the full text.
+MIT License. See [LICENSE](https://github.com/sparkvibe-io/memorymesh/blob/main/LICENSE) for the full text.
 
 ---
 
