@@ -99,4 +99,4 @@ When encryption is enabled, `text` and `metadata_json` are encrypted before stor
 
 ---
 
-[Back to README](../README.md)
+[Back to Home](index.md)

@@ -324,4 +324,4 @@ print(f"Would merge {result.merged_count} duplicates")
 
 ---
 
-[Back to README](../README.md)
+[Back to Home](index.md)

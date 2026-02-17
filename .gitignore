@@ -67,6 +67,9 @@ node_modules/
 # Jupyter
 .ipynb_checkpoints/
 
+# MkDocs site output
+site/
+
 # Build artifacts
 *.so
 *.dylib

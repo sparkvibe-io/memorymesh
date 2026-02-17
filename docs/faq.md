@@ -54,4 +54,4 @@ On a typical machine: `remember()` runs at ~50us/op, `recall()` under 700us even
 
 ---
 
-[Back to README](../README.md)
+[Back to Home](index.md)

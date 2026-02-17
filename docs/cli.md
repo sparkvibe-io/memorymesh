@@ -39,4 +39,4 @@ Compaction uses Jaccard word-set similarity to find near-duplicate memories. Whe
 
 ---
 
-[Back to README](../README.md)
+[Back to Home](index.md)

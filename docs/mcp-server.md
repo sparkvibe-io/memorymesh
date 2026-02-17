@@ -2,47 +2,132 @@
 
 MemoryMesh includes a built-in MCP (Model Context Protocol) server that lets AI assistants use your memory directly as a tool. **No API keys required** for the default setup.
 
-## Claude Code
+## Quick Setup
 
-Add to your Claude Code settings (`~/.claude/settings.json`):
+The fastest way to configure everything:
 
-```json
-{
-  "mcpServers": {
-    "memorymesh": {
-      "command": "memorymesh-mcp"
-    }
-  }
-}
+```bash
+memorymesh init
 ```
 
-## Claude Desktop
+This auto-detects your installed AI tools and configures all of them. Or set up manually below.
 
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+## Setup by Tool
 
-```json
-{
-  "mcpServers": {
-    "memorymesh": {
-      "command": "memorymesh-mcp"
+<div markdown>
+
+=== "Claude Code"
+
+    Add to `~/.claude/settings.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp"
+        }
+      }
     }
-  }
-}
-```
+    ```
 
-## Cursor / Windsurf
+=== "Claude Desktop"
 
-Add to your MCP settings (`.cursor/mcp.json` or equivalent):
+    Add to `claude_desktop_config.json`:
 
-```json
-{
-  "mcpServers": {
-    "memorymesh": {
-      "command": "memorymesh-mcp"
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp"
+        }
+      }
     }
-  }
-}
-```
+    ```
+
+=== "Gemini CLI"
+
+    Add to your Gemini CLI MCP settings (`~/.gemini/settings.json` or project-level config):
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp"
+        }
+      }
+    }
+    ```
+
+=== "OpenAI Codex CLI"
+
+    Add to your Codex CLI MCP settings (`~/.codex/config.json` or project-level config):
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp"
+        }
+      }
+    }
+    ```
+
+=== "Cursor"
+
+    Add to `.cursor/mcp.json` in your project root:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp"
+        }
+      }
+    }
+    ```
+
+=== "Windsurf"
+
+    Add to your Windsurf MCP settings:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp"
+        }
+      }
+    }
+    ```
+
+=== "GitHub Copilot"
+
+    GitHub Copilot reads `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` files. Use MemoryMesh sync to keep these files updated:
+
+    ```bash
+    memorymesh sync --format all
+    ```
+
+    Copilot doesn't support MCP directly, but it benefits from the synced memory files.
+
+=== "Other MCP Clients"
+
+    Any tool that supports the MCP protocol can connect to MemoryMesh. The MCP server uses **stdin/stdout JSON-RPC**:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp"
+        }
+      }
+    }
+    ```
+
+</div>
+
+!!! tip "Recommended: Enable Semantic Search with Ollama"
+    By default, the MCP server uses keyword matching. For **significantly better recall accuracy**, set up Ollama for semantic search. With Ollama, `recall("testing")` finds memories about "pytest", "unit tests", and "CI pipeline" -- not just exact word matches. See [Enabling Semantic Search](#enabling-semantic-search-ollama) below.
 
 ## Environment Variables
 
@@ -57,39 +142,115 @@ Add to your MCP settings (`.cursor/mcp.json` or equivalent):
 
 ### Enabling Semantic Search (Ollama)
 
-By default, the MCP server uses keyword matching (`MEMORYMESH_EMBEDDING=none`). To enable semantic search, configure Ollama:
+By default, the MCP server uses keyword matching (`MEMORYMESH_EMBEDDING=none`). **We strongly recommend enabling Ollama** for semantic search -- it dramatically improves recall quality. With Ollama, searching for "testing" finds memories about "pytest", "unit tests", and "CI pipeline", not just exact keyword matches.
 
-**Claude Code** (`~/.claude/settings.json`):
-```json
-{
-  "mcpServers": {
-    "memorymesh": {
-      "command": "memorymesh-mcp",
-      "env": {
-        "MEMORYMESH_EMBEDDING": "ollama",
-        "MEMORYMESH_OLLAMA_MODEL": "nomic-embed-text"
-      }
-    }
-  }
-}
+**Step 1: Install and start Ollama** (one-time setup):
+
+```bash
+# macOS
+brew install ollama && ollama pull nomic-embed-text
+
+# Linux
+curl -fsSL https://ollama.com/install.sh | sh && ollama pull nomic-embed-text
 ```
 
-**Claude Desktop** (`claude_desktop_config.json`):
-```json
-{
-  "mcpServers": {
-    "memorymesh": {
-      "command": "memorymesh-mcp",
-      "env": {
-        "MEMORYMESH_EMBEDDING": "ollama",
-        "MEMORYMESH_OLLAMA_MODEL": "nomic-embed-text"
+**Step 2: Update your MCP config** to enable Ollama embeddings:
+
+<div markdown>
+
+=== "Claude Code"
+
+    Update `~/.claude/settings.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp",
+          "env": {
+            "MEMORYMESH_EMBEDDING": "ollama",
+            "MEMORYMESH_OLLAMA_MODEL": "nomic-embed-text"
+          }
+        }
       }
     }
-  }
-}
-```
+    ```
 
-This requires Ollama to be running locally. See [Configuration > Using Ollama](configuration.md#using-ollama) for setup instructions.
+=== "Claude Desktop"
+
+    Update `claude_desktop_config.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp",
+          "env": {
+            "MEMORYMESH_EMBEDDING": "ollama",
+            "MEMORYMESH_OLLAMA_MODEL": "nomic-embed-text"
+          }
+        }
+      }
+    }
+    ```
+
+=== "Gemini CLI"
+
+    Update your Gemini CLI MCP settings:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp",
+          "env": {
+            "MEMORYMESH_EMBEDDING": "ollama",
+            "MEMORYMESH_OLLAMA_MODEL": "nomic-embed-text"
+          }
+        }
+      }
+    }
+    ```
+
+=== "Codex CLI"
+
+    Update your Codex CLI MCP settings:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp",
+          "env": {
+            "MEMORYMESH_EMBEDDING": "ollama",
+            "MEMORYMESH_OLLAMA_MODEL": "nomic-embed-text"
+          }
+        }
+      }
+    }
+    ```
+
+=== "Cursor / Windsurf"
+
+    Update `.cursor/mcp.json` or equivalent:
+
+    ```json
+    {
+      "mcpServers": {
+        "memorymesh": {
+          "command": "memorymesh-mcp",
+          "env": {
+            "MEMORYMESH_EMBEDDING": "ollama",
+            "MEMORYMESH_OLLAMA_MODEL": "nomic-embed-text"
+          }
+        }
+      }
+    }
+    ```
+
+</div>
+
+Ollama runs locally -- no API keys, no cloud, no cost. See [Configuration > Using Ollama](configuration.md#using-ollama) for full setup details and troubleshooting.
 
 ## Hybrid Memory Architecture
 
@@ -229,4 +390,4 @@ For any tool that supports MCP:
 
 ---
 
-[Back to README](../README.md)
+[Back to Home](index.md)
