@@ -1,6 +1,6 @@
 # Configuration
 
-Everything you need to configure MemoryMesh: embedding providers, storage paths, and relevance tuning.
+Everything you need to configure MemoryMesh: embedding providers, storage paths, encryption, and relevance tuning.
 
 ## Embedding Providers
 
@@ -58,6 +58,9 @@ memory = MemoryMesh(
     # local_model="all-MiniLM-L6-v2",    # sentence-transformers model
     # local_device="cpu",                 # PyTorch device
 
+    # Encryption (optional)
+    # encryption_key="my-secret-key",     # Encrypt text and metadata at rest
+
     # Relevance tuning (optional)
     # relevance_weights=RelevanceWeights(
     #     semantic=0.5,
@@ -67,6 +70,56 @@ memory = MemoryMesh(
     # ),
 )
 ```
+
+## Encrypted Storage
+
+MemoryMesh can encrypt memory text and metadata at rest. Pass an `encryption_key` to the constructor:
+
+```python
+memory = MemoryMesh(
+    path=".memorymesh/memories.db",
+    encryption_key="my-secret-passphrase",
+)
+
+# Memories are encrypted before writing to SQLite
+memory.remember("Sensitive API key: sk-abc123")
+
+# Decrypted transparently on recall
+results = memory.recall("API key")
+```
+
+How it works:
+
+- A key is derived from your passphrase using PBKDF2-HMAC-SHA256.
+- The `text` and `metadata` fields are encrypted before storage and decrypted on read.
+- IDs, timestamps, importance, and embeddings are **not** encrypted (needed for queries and indexing).
+- A random salt is stored in the database and reused across sessions.
+- Uses only Python standard library (`hashlib`, `hmac`, `os`) -- zero external dependencies.
+
+This protects against casual inspection of the database file on disk. It is not a substitute for full-disk encryption for highly sensitive data.
+
+## Auto-Importance Scoring
+
+Instead of manually setting importance on every `remember()` call, let MemoryMesh score it automatically:
+
+```python
+# Manual importance (default behavior)
+memory.remember("User prefers dark mode", importance=0.7)
+
+# Auto-scored importance based on text analysis
+memory.remember("Critical security decision: use JWT with RS256", auto_importance=True)
+```
+
+The auto-scorer analyzes text using four heuristic signals:
+
+| Signal | Weight | What it detects |
+|---|---|---|
+| Keywords | 35% | Decision words ("critical", "always", "security") boost; tentative words ("maybe", "temporary") reduce |
+| Specificity | 30% | File paths, version numbers, proper nouns, URLs indicate high-value information |
+| Structure | 20% | Code patterns (backticks, function names, imports) suggest technical decisions |
+| Length | 15% | Very short texts score lower; detailed texts score higher |
+
+The output is clamped to `[0.0, 1.0]` with a baseline of `0.5`.
 
 ---
 

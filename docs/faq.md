@@ -32,6 +32,26 @@ No. The base install works with zero dependencies and zero API keys. Ollama embe
 
 Yes. MemoryMesh stores memories in SQLite and can sync to Claude Code (`MEMORY.md`), Codex CLI (`AGENTS.md`), and Gemini CLI (`GEMINI.md`) simultaneously. Run `memorymesh sync --to auto --format all` and your knowledge follows you across tools.
 
+## What is auto-importance scoring?
+
+When you call `remember(text, auto_importance=True)`, MemoryMesh analyzes the text and assigns an importance score automatically. It uses heuristics -- keyword detection (words like "critical", "security", "decision" boost importance), specificity (file paths, version numbers), structure (code patterns), and length. No ML models needed, pure Python, zero dependencies.
+
+## What is episodic memory?
+
+Episodic memory groups memories by conversation session. Pass a `session_id` to `remember()` and later use the same `session_id` in `recall()` to boost memories from the same conversation. Use `get_session()` to retrieve all memories from a session, and `list_sessions()` to see all sessions. This gives AI better continuity across multi-turn interactions.
+
+## What does memory compaction do?
+
+Over time, your memory store accumulates similar or redundant entries. `compact()` detects near-duplicate memories using Jaccard word-set similarity and merges them -- keeping the higher-importance version, combining metadata, and summing access counts. Run `memorymesh compact --dry-run` to preview what would be merged before committing.
+
+## Is the encryption secure enough for production?
+
+The encrypted storage feature protects against casual inspection of the database file on disk. It uses PBKDF2-HMAC-SHA256 for key derivation and HMAC-authenticated encryption with zero external dependencies. For highly sensitive data, combine it with full-disk encryption (FileVault, BitLocker, LUKS). The encryption is not a substitute for proper secrets management.
+
+## How fast is MemoryMesh?
+
+On a typical machine: `remember()` runs at ~50us/op, `recall()` under 700us even at 5,000 memories (keyword mode), concurrent throughput hits ~3,800 ops/s with 4 threads. Run `make bench` to benchmark on your hardware.
+
 ---
 
 [Back to README](../README.md)

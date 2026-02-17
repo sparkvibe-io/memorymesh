@@ -97,11 +97,15 @@ pip install "memorymesh[all]"
 - **Framework-Agnostic** -- Works with any LLM, any framework, any architecture. Use it with LangChain, LlamaIndex, raw API calls, or your own custom setup.
 - **Pluggable Embeddings** -- Choose the embedding provider that fits your needs: local models, Ollama, OpenAI, or plain keyword matching with zero dependencies.
 - **Time-Based Decay** -- Memories naturally fade over time, just like human memory. Recent and frequently accessed memories are ranked higher.
+- **Auto-Importance Scoring** -- Automatically detect and prioritize key information. MemoryMesh analyzes text for keywords, structure, and specificity to assign importance scores without manual tuning.
+- **Episodic Memory** -- Group memories by conversation session. Recall with session context for better continuity across multi-turn interactions.
+- **Memory Compaction** -- Detect and merge similar or redundant memories to keep your store lean. Reduces noise and improves recall accuracy over time.
+- **Encrypted Storage** -- Optionally encrypt memory text and metadata at rest. All data stays protected on disk using application-level encryption with zero external dependencies.
 - **Privacy-First** -- All data stays on your machine by default. No telemetry, no cloud calls, no data collection. You own your data.
 - **Cross-Platform** -- Runs on Linux, macOS, and Windows. Anywhere Python runs, MemoryMesh runs.
 - **MCP Support** -- Expose memory as an MCP (Model Context Protocol) server for seamless integration with AI assistants.
 - **Multi-Tool Sync** -- Sync memories to Claude Code, OpenAI Codex CLI, and Google Gemini CLI simultaneously. Your knowledge follows you across tools.
-- **CLI** -- Inspect, search, export, and manage memories from the terminal. No Python code required.
+- **CLI** -- Inspect, search, export, compact, and manage memories from the terminal. No Python code required.
 
 ---
 
@@ -154,12 +158,13 @@ response = openai_client.chat.completions.create(
 | **[API Reference](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/api.md)** | Full Python API with all methods and parameters |
 | **[Architecture](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/architecture.md)** | System design, dual-store pattern, and schema migrations |
 | **[FAQ](https://github.com/sparkvibe-io/memorymesh/blob/main/docs/faq.md)** | Common questions answered |
+| **[Benchmarks](https://github.com/sparkvibe-io/memorymesh/blob/main/benchmarks/README.md)** | Performance numbers and how to run benchmarks |
 
 ---
 
 ## Roadmap
 
-### v0.1 -- MVP (Current)
+### v0.1 -- MVP
 - Core `remember()` / `recall()` / `forget()` API
 - SQLite-based persistent storage
 - Pluggable embedding providers (none, local, ollama, openai)
@@ -171,12 +176,12 @@ response = openai_client.chat.completions.create(
 - CLI viewer and management tool (`memorymesh list`, `search`, `stats`, `sync`, etc.)
 - Automatic schema migrations (safe upgrades for existing databases)
 
-### v1.0 -- Production Ready
-- Episodic memory (conversation-aware recall)
-- Auto-importance scoring (detect and prioritize key information)
-- Encrypted storage at rest
-- Memory compaction and summarization
-- Comprehensive benchmarks
+### v1.0 -- Production Ready (Current)
+- Episodic memory with session tracking (`session_id` on remember/recall)
+- Auto-importance scoring (heuristic-based: keywords, structure, specificity)
+- Encrypted storage at rest (application-level, zero external dependencies)
+- Memory compaction (detect and merge similar/redundant memories)
+- Comprehensive benchmarks (`make bench` -- throughput, latency, concurrency, disk usage)
 
 ### v2.0 -- Advanced
 - Graph-based memory relationships
