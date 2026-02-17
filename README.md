@@ -176,14 +176,21 @@ response = openai_client.chat.completions.create(
 - CLI viewer and management tool (`memorymesh list`, `search`, `stats`, `sync`, etc.)
 - Automatic schema migrations (safe upgrades for existing databases)
 
-### v1.0 -- Production Ready (Current)
+### v1.0 -- Production Ready
 - Episodic memory with session tracking (`session_id` on remember/recall)
 - Auto-importance scoring (heuristic-based: keywords, structure, specificity)
 - Encrypted storage at rest (application-level, zero external dependencies)
 - Memory compaction (detect and merge similar/redundant memories)
 - Comprehensive benchmarks (`make bench` -- throughput, latency, concurrency, disk usage)
 
-### v2.0 -- Advanced
+### v2.0 -- Personality & Learning Engine (Current)
+- Memory categories with automatic scope routing (`category="preference"` -> global)
+- Auto-categorization from text heuristics (`auto_categorize=True`)
+- `session_start()` method for structured context at the beginning of every AI session
+- Category-aware sync produces structured MEMORY.md (User Profile, Guardrails, Decisions, etc.)
+- 9 built-in categories: preference, guardrail, mistake, personality, question, decision, pattern, context, session_summary
+
+### v3.0 -- Advanced
 - Graph-based memory relationships
 - Multi-device sync
 - Plugin system for custom relevance strategies

@@ -2,8 +2,8 @@
 
 Exposes MemoryMesh as an MCP tool server over stdin/stdout JSON-RPC,
 allowing any MCP-compatible AI tool (Claude Code, Cursor, Windsurf, etc.)
-to use ``remember``, ``recall``, ``forget``, ``forget_all``, and
-``memory_stats`` as first-class tools.
+to use ``remember``, ``recall``, ``forget``, ``forget_all``,
+``memory_stats``, and ``session_start`` as first-class tools.
 
 This module uses **only the Python standard library** (json, sys, logging)
 so it introduces zero additional dependencies.
@@ -136,6 +136,25 @@ TOOLS: list[dict[str, Any]] = [
                         "across all projects."
                     ),
                 },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "preference", "guardrail", "mistake", "personality",
+                        "question", "decision", "pattern", "context",
+                        "session_summary",
+                    ],
+                    "description": (
+                        "Memory category. When set, scope is automatically "
+                        "routed (e.g. 'preference' -> global, 'decision' -> project)."
+                    ),
+                },
+                "auto_categorize": {
+                    "type": "boolean",
+                    "description": (
+                        "If true, automatically detect category from the text. "
+                        "Also enables auto-importance scoring. Default: false."
+                    ),
+                },
             },
             "required": ["text"],
         },
@@ -226,6 +245,26 @@ TOOLS: list[dict[str, Any]] = [
                     "description": (
                         "Limit stats to a specific scope. Omit for combined "
                         "stats across both project and global stores."
+                    ),
+                },
+            },
+        },
+    },
+    {
+        "name": "session_start",
+        "description": (
+            "Retrieve structured context for the start of a new AI session. "
+            "Returns user profile, guardrails, common mistakes, and project "
+            "context to help the AI understand the user and avoid past errors. "
+            "Call this at the beginning of every conversation."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_context": {
+                    "type": "string",
+                    "description": (
+                        "Brief description of what the user is working on."
                     ),
                 },
             },
@@ -534,6 +573,7 @@ class MemoryMeshMCPServer:
             "forget": self._tool_forget,
             "forget_all": self._tool_forget_all,
             "memory_stats": self._tool_memory_stats,
+            "session_start": self._tool_session_start,
         }
 
         handler = tool_handlers.get(tool_name)  # type: ignore[arg-type]
@@ -675,12 +715,17 @@ class MemoryMeshMCPServer:
             return self._tool_error("'importance' must be a number.")
         importance = max(0.0, min(1.0, float(importance)))
 
+        category = args.get("category")
+        auto_categorize_flag = args.get("auto_categorize", False)
+
         try:
             memory_id = self._mesh.remember(
                 text=text,
                 metadata=metadata,
                 importance=importance,
                 scope=scope,
+                category=category,
+                auto_categorize=auto_categorize_flag,
             )
         except RuntimeError as exc:
             return self._tool_error(str(exc))
@@ -808,6 +853,22 @@ class MemoryMeshMCPServer:
         if self._project_root is not None:
             result["project_root"] = self._project_root
         return self._tool_success(json.dumps(result, indent=2))
+
+    def _tool_session_start(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Execute the ``session_start`` tool.
+
+        Args:
+            args: Tool arguments. May include ``project_context``.
+
+        Returns:
+            MCP content response with structured session context.
+        """
+        project_context = args.get("project_context")
+        if project_context is not None and not isinstance(project_context, str):
+            return self._tool_error("'project_context' must be a string.")
+
+        context = self._mesh.session_start(project_context=project_context)
+        return self._tool_success(json.dumps(context, indent=2))
 
     # ------------------------------------------------------------------
     # Response helpers

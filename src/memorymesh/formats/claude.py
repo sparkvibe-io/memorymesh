@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from . import FormatAdapter, register_format
 from ._shared import (
+    group_by_category,
     group_by_topic_or_tier,
     parse_importance_prefix,
 )
@@ -136,7 +137,8 @@ class ClaudeAdapter(FormatAdapter):
             self._write_empty_file(output_path)
             return 0
 
-        sections = group_by_topic_or_tier(memories)
+        has_categories = any(m.metadata.get("category") for m in memories)
+        sections = group_by_category(memories) if has_categories else group_by_topic_or_tier(memories)
         lines = self._build_markdown(sections)
 
         truncated_count = 0

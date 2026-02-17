@@ -6,7 +6,7 @@ Full Python API for the `MemoryMesh` class.
 
 | Method | Description |
 |---|---|
-| `remember(text, metadata, importance, decay_rate, scope, auto_importance, session_id)` | Store a new memory |
+| `remember(text, metadata, importance, decay_rate, scope, auto_importance, session_id, category, auto_categorize)` | Store a new memory |
 | `recall(query, k, min_relevance, scope, session_id)` | Recall top-k relevant memories |
 | `forget(memory_id)` | Delete a specific memory (checks both stores) |
 | `forget_all(scope)` | Delete all memories in a scope (default: `"project"`) |
@@ -23,6 +23,12 @@ Full Python API for the `MemoryMesh` class.
 |---|---|
 | `get_session(session_id)` | Retrieve all memories for a conversation session |
 | `list_sessions()` | List all sessions with counts and timestamps |
+
+## Session & Context Methods
+
+| Method | Description |
+|---|---|
+| `session_start(project_context)` | Retrieve structured context for a new AI session |
 
 ## Compaction Methods
 
@@ -54,10 +60,28 @@ memory.remember(
     scope="project",                 # Optional: "project" or "global"
     auto_importance=False,           # Optional: auto-score importance from text
     session_id=None,                 # Optional: group into a conversation session
+    category=None,                   # Optional: "preference", "guardrail", "mistake", etc.
+    auto_categorize=False,           # Optional: auto-detect category from text
 )
 ```
 
 When `auto_importance=True`, the `importance` parameter is ignored and MemoryMesh scores it automatically based on text analysis.
+
+When `category` is set, the `scope` is automatically determined (e.g. `"preference"` -> global, `"decision"` -> project). When `auto_categorize=True`, category is detected from text heuristics and `auto_importance` is also enabled.
+
+**Valid categories:**
+
+| Category | Scope | Description |
+|---|---|---|
+| `preference` | global | User coding style, tool preferences |
+| `guardrail` | global | Rules AI must follow |
+| `mistake` | global | Past mistakes to avoid |
+| `personality` | global | User character traits |
+| `question` | global | Recurring questions/concerns |
+| `decision` | project | Architecture/design decisions |
+| `pattern` | project | Code patterns and conventions |
+| `context` | project | Project-specific facts |
+| `session_summary` | project | Auto-generated session summaries |
 
 ## recall()
 
@@ -85,6 +109,24 @@ result = memory.compact(
 print(result.merged_count)           # Number of merges performed
 print(result.deleted_ids)            # IDs of memories that were merged away
 print(result.kept_ids)               # IDs of memories that absorbed merges
+```
+
+## session_start()
+
+```python
+context = memory.session_start(
+    project_context="working on auth module",  # Optional: helps find relevant project memories
+)
+
+# Returns a structured dict:
+# {
+#     "user_profile": ["Senior Python developer", "Prefers dark mode"],
+#     "guardrails": ["Never auto-commit without asking"],
+#     "common_mistakes": ["Forgot to run tests before pushing"],
+#     "common_questions": ["Always asks about test coverage"],
+#     "project_context": ["Uses SQLite for storage", "Google-style docstrings"],
+#     "last_session": ["Implemented auth module, 15 tests added"],
+# }
 ```
 
 ## Context Manager

@@ -24,6 +24,15 @@ from __future__ import annotations
 __version__ = "1.0.0"
 
 from .auto_importance import score_importance
+from .categories import (
+    CATEGORY_SCOPE_MAP,
+    GLOBAL_CATEGORIES,
+    PROJECT_CATEGORIES,
+    VALID_CATEGORIES,
+    auto_categorize,
+    scope_for_category,
+    validate_category,
+)
 from .compaction import CompactionResult, compact
 from .core import MemoryMesh
 from .embeddings import (
@@ -56,6 +65,14 @@ from .sync import sync_from_memory_md, sync_to_memory_md
 __all__ = [
     # Auto-importance
     "score_importance",
+    # Categories
+    "CATEGORY_SCOPE_MAP",
+    "VALID_CATEGORIES",
+    "GLOBAL_CATEGORIES",
+    "PROJECT_CATEGORIES",
+    "auto_categorize",
+    "scope_for_category",
+    "validate_category",
     # Compaction
     "compact",
     "CompactionResult",

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from . import FormatAdapter, register_format
 from ._shared import (
+    group_by_category,
     group_by_topic_or_tier,
     importance_to_html_comment,
     inject_section,
@@ -113,7 +114,8 @@ class GeminiAdapter(FormatAdapter):
         if not memories:
             return 0
 
-        sections = group_by_topic_or_tier(memories)
+        has_categories = any(m.metadata.get("category") for m in memories)
+        sections = group_by_category(memories) if has_categories else group_by_topic_or_tier(memories)
         section_lines = self._build_section(sections)
 
         if line_limit and len(section_lines) > line_limit:

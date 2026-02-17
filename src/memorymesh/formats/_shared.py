@@ -80,6 +80,19 @@ DEFAULT_TIER_LABELS = {
 }
 """Default section headers for importance-tiered grouping."""
 
+CATEGORY_SECTION_LABELS: dict[str, str] = {
+    "personality": "User Profile",
+    "preference": "User Profile",
+    "guardrail": "Guardrails",
+    "mistake": "Common Mistakes",
+    "question": "Common Questions",
+    "decision": "Decisions",
+    "pattern": "Patterns & Conventions",
+    "context": "Project Context",
+    "session_summary": "Last Session",
+}
+"""Maps category names to human-readable section headings for sync output."""
+
 
 def group_by_topic_or_tier(
     memories: list[Memory],
@@ -119,6 +132,40 @@ def group_by_topic_or_tier(
             sections.setdefault(tier, []).append(mem)
 
     return sections
+
+
+def group_by_category(
+    memories: list[Memory],
+) -> dict[str, list[Memory]]:
+    """Group memories by their ``metadata["category"]`` value.
+
+    Memories without a category are grouped using
+    :func:`group_by_topic_or_tier` and merged into the result.
+
+    Args:
+        memories: Pre-sorted list of memories (highest importance first).
+
+    Returns:
+        An ordered dictionary mapping section names to lists of memories.
+    """
+    categorized: dict[str, list[Memory]] = {}
+    uncategorized: list[Memory] = []
+
+    for mem in memories:
+        cat = mem.metadata.get("category")
+        if isinstance(cat, str) and cat in CATEGORY_SECTION_LABELS:
+            label = CATEGORY_SECTION_LABELS[cat]
+            categorized.setdefault(label, []).append(mem)
+        else:
+            uncategorized.append(mem)
+
+    # Merge uncategorized memories using legacy grouping.
+    if uncategorized:
+        legacy_groups = group_by_topic_or_tier(uncategorized)
+        for section_name, mems in legacy_groups.items():
+            categorized.setdefault(section_name, []).extend(mems)
+
+    return categorized
 
 
 # ---------------------------------------------------------------------------

@@ -11,6 +11,8 @@ import os
 from typing import Any
 
 from .auto_importance import score_importance
+from .categories import CATEGORY_SCOPE_MAP, GLOBAL_CATEGORIES, PROJECT_CATEGORIES, validate_category
+from .categories import auto_categorize as _auto_categorize
 from .compaction import CompactionResult
 from .embeddings import EmbeddingProvider, NoopEmbedding, create_embedding_provider
 from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory, validate_scope
@@ -140,6 +142,8 @@ class MemoryMesh:
         scope: str = PROJECT_SCOPE,
         auto_importance: bool = False,
         session_id: str | None = None,
+        category: str | None = None,
+        auto_categorize: bool = False,
     ) -> str:
         """Store a new memory.
 
@@ -150,11 +154,19 @@ class MemoryMesh:
                 make the memory more prominent during recall.
             decay_rate: Rate at which importance decays over time.
                 ``0`` means the memory never decays.
-            scope: ``"project"`` (default) or ``"global"``.
+            scope: ``"project"`` (default) or ``"global"``.  When
+                *category* is provided, the scope is automatically
+                determined by the category and this parameter is ignored.
             auto_importance: If ``True``, override *importance* with a
                 heuristic score computed from the text content.
             session_id: Optional session/episode identifier for grouping
                 memories by conversation or task.
+            category: Optional memory category (e.g. ``"preference"``,
+                ``"guardrail"``, ``"decision"``).  When set, the scope
+                is automatically routed based on the category.
+            auto_categorize: If ``True`` and *category* is ``None``,
+                detect the category from the text using heuristics.
+                Also enables *auto_importance* automatically.
 
         Returns:
             The unique ID of the newly created memory.
@@ -162,19 +174,32 @@ class MemoryMesh:
         Raises:
             RuntimeError: If *scope* is ``"project"`` but no project
                 database is configured.
+            ValueError: If *category* is not a recognised category name.
         """
+        meta = dict(metadata) if metadata else {}
+
+        # -- Category handling -------------------------------------------------
+        if auto_categorize and category is None:
+            category = _auto_categorize(text, meta)
+            auto_importance = True  # auto-categorize implies auto-importance
+
+        if category is not None:
+            validate_category(category)
+            scope = CATEGORY_SCOPE_MAP[category]
+            meta["category"] = category
+
         validate_scope(scope)
         store = self._store_for_scope(scope)
 
         if auto_importance:
-            importance = score_importance(text, metadata)
+            importance = score_importance(text, meta)
 
         # Compute embedding (may be empty list for NoopEmbedding).
         emb = self._safe_embed(text)
 
         memory = Memory(
             text=text,
-            metadata=metadata or {},
+            metadata=meta,
             embedding=emb if emb else None,
             importance=importance,
             decay_rate=decay_rate,
@@ -184,10 +209,11 @@ class MemoryMesh:
 
         store.save(memory)
         logger.debug(
-            "Remembered memory %s (%d chars, scope=%s, session=%s)",
+            "Remembered memory %s (%d chars, scope=%s, category=%s, session=%s)",
             memory.id,
             len(text),
             scope,
+            category,
             session_id,
         )
         return memory.id
@@ -565,6 +591,127 @@ class MemoryMesh:
             similarity_threshold=similarity_threshold,
             dry_run=dry_run,
         )
+
+    # ------------------------------------------------------------------
+    # Session start (structured context retrieval)
+    # ------------------------------------------------------------------
+
+    def session_start(
+        self,
+        project_context: str | None = None,
+    ) -> dict[str, Any]:
+        """Retrieve structured context for the start of a new session.
+
+        Gathers user profile, guardrails, common mistakes, recurring
+        questions, and project context into a structured dict that an AI
+        can consume as system context.
+
+        Args:
+            project_context: Optional brief description of what the user
+                is working on, used to find relevant project memories.
+
+        Returns:
+            A dict with keys:
+
+            - ``user_profile`` -- personality + preferences (list of str)
+            - ``guardrails`` -- rules to follow (list of str)
+            - ``common_mistakes`` -- past mistakes to avoid (list of str)
+            - ``common_questions`` -- recurring user questions (list of str)
+            - ``project_context`` -- relevant project memories (list of str)
+            - ``last_session`` -- most recent session summary (list of str)
+        """
+        max_per_category = 5
+
+        # -- Helper: collect memories by category from a store -------------
+        def _collect(
+            store: MemoryStore | None,
+            categories: frozenset[str],
+            scope_label: str,
+        ) -> dict[str, list[Memory]]:
+            if store is None:
+                return {cat: [] for cat in categories}
+            all_mems = store.list_all(limit=500)
+            by_cat: dict[str, list[Memory]] = {cat: [] for cat in categories}
+            for mem in all_mems:
+                cat = mem.metadata.get("category")
+                if cat in categories:
+                    by_cat[cat].append(mem)
+            # Sort each bucket by importance (desc) and trim.
+            for cat in by_cat:
+                by_cat[cat].sort(key=lambda m: m.importance, reverse=True)
+                by_cat[cat] = by_cat[cat][:max_per_category]
+            return by_cat
+
+        global_by_cat = _collect(
+            self._global_store, GLOBAL_CATEGORIES, GLOBAL_SCOPE
+        )
+        project_by_cat = _collect(
+            self._project_store, PROJECT_CATEGORIES, PROJECT_SCOPE
+        )
+
+        # -- Build result dict ---------------------------------------------
+        result: dict[str, list[str]] = {
+            "user_profile": [
+                m.text
+                for m in (
+                    global_by_cat.get("personality", [])
+                    + global_by_cat.get("preference", [])
+                )
+            ][:max_per_category],
+            "guardrails": [
+                m.text for m in global_by_cat.get("guardrail", [])
+            ],
+            "common_mistakes": [
+                m.text for m in global_by_cat.get("mistake", [])
+            ],
+            "common_questions": [
+                m.text for m in global_by_cat.get("question", [])
+            ],
+            "project_context": [
+                m.text for m in project_by_cat.get("context", [])
+            ],
+            "last_session": [
+                m.text for m in project_by_cat.get("session_summary", [])[:1]
+            ],
+        }
+
+        # Add project decisions and patterns to project_context.
+        result["project_context"].extend(
+            m.text for m in project_by_cat.get("decision", [])
+        )
+        result["project_context"].extend(
+            m.text for m in project_by_cat.get("pattern", [])
+        )
+        result["project_context"] = result["project_context"][:max_per_category]
+
+        # If project_context query provided, supplement with recall results.
+        if project_context and self._project_store:
+            recalled = self.recall(
+                query=project_context,
+                k=max_per_category,
+                scope=PROJECT_SCOPE,
+            )
+            existing_texts = set(result["project_context"])
+            for mem in recalled:
+                if mem.text not in existing_texts:
+                    result["project_context"].append(mem.text)
+                    existing_texts.add(mem.text)
+            result["project_context"] = result["project_context"][
+                : max_per_category * 2
+            ]
+
+        logger.info(
+            "session_start: profile=%d guardrails=%d mistakes=%d "
+            "questions=%d project=%d session=%d",
+            len(result["user_profile"]),
+            len(result["guardrails"]),
+            len(result["common_mistakes"]),
+            len(result["common_questions"]),
+            len(result["project_context"]),
+            len(result["last_session"]),
+        )
+
+        return result
 
     # ------------------------------------------------------------------
     # Context manager
