@@ -100,6 +100,8 @@ pip install memorymesh[all]
 - **Privacy-First** -- All data stays on your machine by default. No telemetry, no cloud calls, no data collection. You own your data.
 - **Cross-Platform** -- Runs on Linux, macOS, and Windows. Anywhere Python runs, MemoryMesh runs.
 - **MCP Support** -- Expose memory as an MCP (Model Context Protocol) server for seamless integration with AI assistants.
+- **Multi-Tool Sync** -- Sync memories to Claude Code, OpenAI Codex CLI, and Google Gemini CLI simultaneously. Your knowledge follows you across tools.
+- **CLI** -- Inspect, search, export, and manage memories from the terminal. No Python code required.
 
 ---
 
@@ -291,6 +293,154 @@ No API keys are needed for the default setup. The MCP server uses keyword matchi
 
 ---
 
+## Teaching Your AI to Use MemoryMesh
+
+Installing the MCP server gives your AI assistant the *ability* to use memory. But LLMs do not use tools proactively unless you tell them to. You need to add instructions to your AI tool's configuration file explaining **when** and **how** to use MemoryMesh.
+
+The fastest way to set everything up is:
+
+```bash
+memorymesh init
+```
+
+This auto-detects which AI tools you have installed and configures all of them. You can also target a single tool:
+
+```bash
+memorymesh init --only claude
+memorymesh init --only codex
+memorymesh init --only gemini
+```
+
+Below is what each tool needs and the exact text to add if you prefer to do it manually.
+
+### Claude Code
+
+Add a `## Memory (MemoryMesh)` section to your project's `CLAUDE.md`:
+
+```markdown
+## Memory (MemoryMesh)
+
+MemoryMesh is configured as an MCP tool in this project. You MUST use it
+proactively -- it provides persistent memory across conversations.
+
+### When to `recall`
+
+- **Start of every conversation**: Call `recall` with a summary of the user's
+  request to check for relevant prior context.
+- **Before making architectural decisions**: Check if this was decided before.
+- **When debugging**: Check if this problem was encountered previously.
+
+### When to `remember`
+
+- **After completing a task**: Store key decisions, patterns discovered, and
+  architectural choices.
+- **When the user teaches you something**: Immediately remember it.
+- **After fixing a non-trivial bug**: Remember the root cause and fix.
+- **When discovering undocumented patterns**: Store conventions found in the
+  codebase.
+
+### Scope guidance
+
+- Use `scope: "project"` for project-specific decisions, architecture, and
+  patterns.
+- Use `scope: "global"` for user preferences, identity, and cross-project
+  facts.
+```
+
+### OpenAI Codex CLI
+
+Add a `## Memory (MemoryMesh)` section to your project's `AGENTS.md`:
+
+```markdown
+## Memory (MemoryMesh)
+
+MemoryMesh is configured as an MCP tool. Use it proactively for persistent
+memory across sessions.
+
+- At the start of every task, call `recall` with a summary of the request.
+- After completing work, call `remember` to store key decisions and patterns.
+- Use `scope: "project"` for project-specific facts, `scope: "global"` for
+  user preferences.
+```
+
+### Google Gemini CLI
+
+Add a `## Memory (MemoryMesh)` section to your project's `GEMINI.md`:
+
+```markdown
+## Memory (MemoryMesh)
+
+MemoryMesh is configured as an MCP tool. Use it proactively for persistent
+memory across sessions.
+
+- At the start of every task, call `recall` with a summary of the request.
+- After completing work, call `remember` to store key decisions and patterns.
+- Use `scope: "project"` for project-specific facts, `scope: "global"` for
+  user preferences.
+```
+
+### Generic / Other MCP-Compatible Tools
+
+For any tool that supports MCP:
+
+1. Add the MCP server config (see [MCP Server](#mcp-server-claude-code-cursor-windsurf) above).
+2. Add instructions to the tool's system prompt or configuration file telling it to call `recall` at the start of conversations and `remember` after completing work.
+
+---
+
+## Multi-Tool Memory Sync
+
+MemoryMesh stores all memories in SQLite. The sync feature exports them to the markdown files that each AI tool reads natively, so your knowledge follows you across tools.
+
+```bash
+# Export to Claude Code's MEMORY.md
+memorymesh sync --to auto --format claude
+
+# Export to Codex CLI's AGENTS.md
+memorymesh sync --to auto --format codex
+
+# Export to Gemini CLI's GEMINI.md
+memorymesh sync --to auto --format gemini
+
+# Export to ALL detected tools at once
+memorymesh sync --to auto --format all
+
+# Import memories FROM a markdown file back into MemoryMesh
+memorymesh sync --from AGENTS.md --format codex
+
+# List which tools are detected on your system
+memorymesh formats
+```
+
+How it works:
+
+- Each tool gets its own **format adapter** that outputs native markdown (no MemoryMesh-specific markup visible to the tool).
+- Exports write only to a `## MemoryMesh Synced Memories` section, preserving any content you wrote yourself.
+- Importance scores round-trip via invisible HTML comments, so re-importing preserves priority.
+- Use `--to auto` to let MemoryMesh detect the correct file path for each tool.
+
+---
+
+## CLI Reference
+
+The `memorymesh` CLI lets you inspect, manage, and sync your memory stores from the terminal.
+
+| Command | Description |
+|---|---|
+| `memorymesh list` | List stored memories (table or JSON) |
+| `memorymesh search <query>` | Search memories by keyword |
+| `memorymesh show <id>` | Show full detail for a memory (supports partial IDs) |
+| `memorymesh stats` | Show memory count, oldest/newest timestamps |
+| `memorymesh export` | Export memories to JSON or HTML |
+| `memorymesh init` | Set up MemoryMesh for a project (MCP config + tool configs) |
+| `memorymesh sync` | Sync memories to/from AI tool markdown files |
+| `memorymesh formats` | List known format adapters and install status |
+| `memorymesh report` | Generate a memory analytics report |
+
+Most commands accept `--scope project|global|all` to filter by store. Run `memorymesh <command> --help` for full options.
+
+---
+
 ## API Reference
 
 | Method | Description |
@@ -357,6 +507,40 @@ with MemoryMesh() as memory:
 
 ---
 
+## FAQ
+
+### Why SQLite, not plain .md files?
+
+SQLite is the engine. Markdown is the view. This is the same pattern browsers use -- they store bookmarks in SQLite but display them as a list.
+
+Plain markdown files cannot do: vector similarity search, importance scoring, access counting, time-based decay, metadata filtering, or atomic transactions. MemoryMesh uses SQLite for all of that, and syncs a readable snapshot to `.md` files for tools that need them.
+
+### Why not a full RAG / vector database (Pinecone, Weaviate)?
+
+MemoryMesh already IS local RAG. It embeds text, stores vectors, computes cosine similarity, and ranks results -- all in-process, all local. For AI memory scale (hundreds to low thousands of memories), SQLite with in-process similarity is faster and simpler than a separate database server. Zero infrastructure, zero cost, zero network latency.
+
+### Why structured storage for unstructured data?
+
+The text is unstructured -- `remember("whatever you want")` accepts any free-form string. The metadata is structured: importance scores, timestamps, access counts, decay rates, embeddings. The structure is invisible plumbing that makes recall smart. You never see it unless you want to.
+
+### What does "semantic search" mean?
+
+Instead of matching exact keywords, semantic search understands meaning. Searching "How do we handle auth?" finds memories about authentication even if they never contain the word "auth." This requires an embedding provider (local, Ollama, or OpenAI). Without one, MemoryMesh falls back to keyword matching, which still works well for most use cases.
+
+### What is the difference between standalone and with Ollama?
+
+**Standalone** (`embedding="none"`) uses keyword matching -- fast, zero dependencies, good for most use cases. **With Ollama** (`embedding="ollama"`) you get semantic search via a local model -- better recall accuracy, still fully local, no API keys. Ollama runs on your machine just like MemoryMesh.
+
+### Do I need an API key?
+
+No. The base install works with zero dependencies and zero API keys. Ollama embeddings are also free and local. Only OpenAI embeddings require an API key.
+
+### Can I use MemoryMesh with multiple AI tools at once?
+
+Yes. MemoryMesh stores memories in SQLite and can sync to Claude Code (`MEMORY.md`), Codex CLI (`AGENTS.md`), and Gemini CLI (`GEMINI.md`) simultaneously. Run `memorymesh sync --to auto --format all` and your knowledge follows you across tools.
+
+---
+
 ## Roadmap
 
 ### v0.1 -- MVP (Current)
@@ -367,6 +551,8 @@ with MemoryMesh() as memory:
 - Relevance scoring (semantic + recency + importance + frequency)
 - MCP server for AI assistant integration (Claude Code, Cursor, Windsurf)
 - Security hardening (input limits, path validation, error sanitization)
+- Multi-tool memory sync (Claude, Codex, Gemini) with format adapters
+- CLI viewer and management tool (`memorymesh list`, `search`, `stats`, `sync`, etc.)
 
 ### v1.0 -- Production Ready
 - Episodic memory (conversation-aware recall)
@@ -378,7 +564,6 @@ with MemoryMesh() as memory:
 ### v2.0 -- Advanced
 - Graph-based memory relationships
 - Multi-device sync
-- Memory import/export
 - Plugin system for custom relevance strategies
 - Streaming recall for large memory sets
 
