@@ -29,14 +29,152 @@ memory = MemoryMesh(embedding="none")
 
 ### Using Ollama
 
-Ollama must be running before MemoryMesh can use it for embeddings:
+#### What is Ollama?
 
-```bash
-ollama serve                              # start in a terminal
-ollama pull nomic-embed-text              # download the model (once)
+Ollama is a free, open-source application that runs AI models locally on your machine. Think of it like a local server -- it runs in the background and applications connect to it over HTTP. MemoryMesh uses Ollama for one specific purpose: converting text into numerical vectors (embeddings) that enable semantic search.
+
+Without Ollama (or another embedding provider), MemoryMesh falls back to keyword matching -- `recall("testing")` will only find memories containing the exact word "testing". With Ollama, MemoryMesh understands meaning -- `recall("testing")` finds memories about "pytest", "unit tests", "test coverage", and "CI pipeline" because they are semantically related.
+
+#### How it works
+
+```
+┌──────────────────┐         HTTP (localhost:11434)        ┌──────────────────┐
+│   Your AI Tool   │                                       │                  │
+│  (Claude Code,   │                                       │     Ollama       │
+│   Gemini CLI,    │                                       │  (background     │
+│   Cursor, etc.)  │                                       │   service)       │
+│        │         │                                       │                  │
+│   MemoryMesh     │  ───── "embed this text" ──────────>  │  nomic-embed-    │
+│   (MCP server)   │  <──── [0.02, -0.15, 0.89, ...] ───  │  text model      │
+│                  │         768 numbers back               │                  │
+└──────────────────┘                                       └──────────────────┘
+         │
+    SQLite DB
+  (memories.db)
 ```
 
-If you installed Ollama via Homebrew, it may already be running as a service (`brew services info ollama`). If `ollama serve` says "address already in use", Ollama is already running and you're good to go.
+1. When you call `remember("User prefers dark mode")`, MemoryMesh sends the text to Ollama
+2. Ollama runs the embedding model and returns a vector of 768 numbers representing the meaning
+3. MemoryMesh stores the text + vector in SQLite
+4. When you call `recall("theme preferences")`, MemoryMesh embeds the query and finds stored memories with similar vectors
+5. This is why `recall("theme preferences")` finds "User prefers dark mode" even though no words match
+
+#### Step 1: Install Ollama
+
+Ollama is a separate application. Install it first:
+
+**macOS:**
+```bash
+brew install ollama
+```
+
+**Linux:**
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+**Windows:**
+Download from [ollama.com/download](https://ollama.com/download).
+
+#### Step 2: Start Ollama
+
+Ollama runs as a background service on port 11434. You start it once and it stays running.
+
+```bash
+# Start Ollama (runs in the background)
+ollama serve
+```
+
+**Already running?** If you see "address already in use", Ollama is already running. This is fine -- on macOS with Homebrew it often auto-starts.
+
+```bash
+# Check if Ollama is running
+brew services info ollama       # macOS (Homebrew)
+curl http://localhost:11434     # Any OS -- should return "Ollama is running"
+```
+
+#### Step 3: Pull the embedding model
+
+Download the embedding model that MemoryMesh will use. This is a one-time download (~274MB):
+
+```bash
+ollama pull nomic-embed-text
+```
+
+**What is `nomic-embed-text`?** It is an *embedding model*, not a chat model. It does one thing: convert text into a vector of 768 numbers that capture semantic meaning. Similar texts produce similar vectors. This is what powers MemoryMesh's semantic search.
+
+| Embedding Model | Dimensions | Size | Quality | Speed |
+|---|---|---|---|---|
+| `nomic-embed-text` | 768 | 274MB | Very good | Fast |
+| `all-minilm` | 384 | 46MB | Good | Very fast |
+| `mxbai-embed-large` | 1024 | 670MB | Best | Slower |
+
+`nomic-embed-text` is the recommended default -- good quality, reasonable size, fast. You can use a different model by passing `ollama_model="model-name"`.
+
+#### Step 4: Install and configure MemoryMesh
+
+```bash
+# Install MemoryMesh (Ollama support uses only stdlib -- no extra deps needed)
+pip install memorymesh
+```
+
+**Important:** You do NOT need a special install for Ollama support. `pip install memorymesh` is sufficient because MemoryMesh communicates with Ollama via HTTP using Python's built-in `urllib` -- no extra packages required.
+
+**As a Python library:**
+```python
+from memorymesh import MemoryMesh
+
+memory = MemoryMesh(
+    embedding="ollama",
+    ollama_model="nomic-embed-text",           # default
+    # ollama_base_url="http://localhost:11434", # default, change if Ollama is on another machine
+)
+```
+
+**As an MCP server** (for Claude Code, Gemini CLI, Cursor, etc.):
+```json
+{
+  "mcpServers": {
+    "memorymesh": {
+      "command": "memorymesh-mcp",
+      "env": {
+        "MEMORYMESH_EMBEDDING": "ollama",
+        "MEMORYMESH_OLLAMA_MODEL": "nomic-embed-text"
+      }
+    }
+  }
+}
+```
+
+#### Step 5: Verify it works
+
+```bash
+# Quick test
+python -c "
+from memorymesh import MemoryMesh
+m = MemoryMesh(embedding='ollama')
+m.remember('User prefers Python and dark mode')
+results = m.recall('programming language preferences')
+print(results[0].text if results else 'No results')
+m.close()
+"
+```
+
+If you see "User prefers Python and dark mode", semantic search is working.
+
+#### FAQ
+
+**Q: Does Ollama need to be running in the same terminal as MemoryMesh?**
+No. Ollama is a background service. Once started, it listens on port 11434. MemoryMesh connects to it via HTTP from any process. You can run `pip install`, `memorymesh-mcp`, and your AI tools in any terminal.
+
+**Q: Does Ollama use my GPU?**
+Yes, if available. Ollama automatically uses your GPU (CUDA on Linux/Windows, Metal on macOS) for faster inference. The embedding model is small enough that CPU is also fast (~10ms per embedding).
+
+**Q: Can I use Ollama on a remote server?**
+Yes. Set `ollama_base_url="http://your-server:11434"` or `MEMORYMESH_OLLAMA_BASE_URL` env var. MemoryMesh will connect to the remote Ollama instance.
+
+**Q: What if Ollama is not running when MemoryMesh starts?**
+MemoryMesh gracefully falls back to keyword-only search. Your memories are still stored and recalled, just without semantic matching. Start Ollama and the next `recall()` will use embeddings automatically.
 
 ## Constructor Options
 
@@ -120,6 +258,69 @@ The auto-scorer analyzes text using four heuristic signals:
 | Length | 15% | Very short texts score lower; detailed texts score higher |
 
 The output is clamped to `[0.0, 1.0]` with a baseline of `0.5`.
+
+## Memory Categories
+
+MemoryMesh v2.0 introduces automatic memory categorization. When you set a category, the scope is automatically routed:
+
+```python
+# Category determines scope automatically
+memory.remember("I prefer dark mode", category="preference")        # -> global
+memory.remember("Never auto-commit", category="guardrail")          # -> global
+memory.remember("Chose SQLite over Postgres", category="decision")  # -> project
+
+# Or let MemoryMesh detect the category from text
+memory.remember("I always use black for formatting", auto_categorize=True)
+# Detected as "preference" -> stored in global scope
+```
+
+| Category | Auto-Scope | Description |
+|---|---|---|
+| `preference` | global | User coding style, tool preferences |
+| `guardrail` | global | Rules AI must follow |
+| `mistake` | global | Past mistakes to avoid |
+| `personality` | global | User character traits |
+| `question` | global | Recurring questions/concerns |
+| `decision` | project | Architecture/design decisions |
+| `pattern` | project | Code patterns and conventions |
+| `context` | project | Project-specific facts |
+| `session_summary` | project | Auto-generated session summaries |
+
+When `auto_categorize=True`, MemoryMesh also enables `auto_importance=True` automatically.
+
+## Session Start
+
+Retrieve structured context at the beginning of every AI session:
+
+```python
+context = memory.session_start(project_context="working on auth module")
+
+# Returns:
+# {
+#     "user_profile": ["Senior Python developer", "Prefers dark mode"],
+#     "guardrails": ["Never auto-commit without asking"],
+#     "common_mistakes": ["Forgot to run tests before pushing"],
+#     "common_questions": ["Always asks about test coverage"],
+#     "project_context": ["Uses SQLite for storage", "Google-style docstrings"],
+#     "last_session": ["Implemented auth module, 15 tests added"],
+# }
+```
+
+This is available as an MCP tool (`session_start`) that AI assistants can call at the beginning of every conversation.
+
+## Auto-Compaction
+
+MemoryMesh automatically detects and merges duplicate memories during normal operation. Every 50 `remember()` calls, a lightweight compaction pass runs in the background. This is like SQLite's auto-vacuum -- you never need to think about it.
+
+```python
+# Adjust the interval (default: 50)
+memory.compact_interval = 100   # compact every 100 writes
+memory.compact_interval = 0     # disable auto-compaction
+
+# Manual compaction is still available
+result = memory.compact(scope="project", dry_run=True)
+print(f"Would merge {result.merged_count} duplicates")
+```
 
 ---
 

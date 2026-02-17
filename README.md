@@ -105,6 +105,9 @@ pip install "memorymesh[all]"
 - **Cross-Platform** -- Runs on Linux, macOS, and Windows. Anywhere Python runs, MemoryMesh runs.
 - **MCP Support** -- Expose memory as an MCP (Model Context Protocol) server for seamless integration with AI assistants.
 - **Multi-Tool Sync** -- Sync memories to Claude Code, OpenAI Codex CLI, and Google Gemini CLI simultaneously. Your knowledge follows you across tools.
+- **Memory Categories** -- Automatic categorization with scope routing. Preferences and guardrails go to global scope; decisions and patterns stay in the project. MemoryMesh decides where memories belong.
+- **Session Start** -- Structured context retrieval at the beginning of every AI session. Returns user profile, guardrails, common mistakes, and project context in one call.
+- **Auto-Compaction** -- Transparent deduplication that runs automatically during normal use. Like SQLite's auto-vacuum, you never need to think about it.
 - **CLI** -- Inspect, search, export, compact, and manage memories from the terminal. No Python code required.
 
 ---

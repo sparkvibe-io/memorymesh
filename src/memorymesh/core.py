@@ -108,6 +108,10 @@ class MemoryMesh:
         # -- Relevance engine --------------------------------------------
         self._engine = RelevanceEngine(weights=relevance_weights)
 
+        # -- Auto-compaction settings ----------------------------------------
+        self._compact_interval = 50  # compact every N writes
+        self._writes_since_compact = 0
+
         logger.info(
             "MemoryMesh initialised  project_store=%r  global_store=%r  embedder=%r",
             self._project_store,
@@ -128,6 +132,18 @@ class MemoryMesh:
     def global_path(self) -> str:
         """Return the global database path."""
         return self._global_store._path
+
+    @property
+    def compact_interval(self) -> int:
+        """Number of ``remember()`` calls between automatic compaction passes.
+
+        Set to ``0`` to disable auto-compaction.  Default is ``50``.
+        """
+        return self._compact_interval
+
+    @compact_interval.setter
+    def compact_interval(self, value: int) -> None:
+        self._compact_interval = max(0, value)
 
     # ------------------------------------------------------------------
     # Public API
@@ -216,6 +232,12 @@ class MemoryMesh:
             category,
             session_id,
         )
+
+        # Auto-compact if threshold reached.
+        self._writes_since_compact += 1
+        if self._compact_interval > 0 and self._writes_since_compact >= self._compact_interval:
+            self._auto_compact(scope)
+
         return memory.id
 
     def recall(
@@ -737,6 +759,35 @@ class MemoryMesh:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _auto_compact(self, scope: str) -> None:
+        """Run a lightweight compaction pass after N writes.
+
+        Silently catches and logs any errors so that a compaction
+        failure never breaks a ``remember()`` call.
+
+        Args:
+            scope: The scope to compact.
+        """
+        try:
+            result = self.compact(
+                scope=scope,
+                similarity_threshold=0.85,
+                dry_run=False,
+            )
+            self._writes_since_compact = 0
+            if result.merged_count > 0:
+                logger.info(
+                    "Auto-compacted %d duplicate(s) in %s store.",
+                    result.merged_count,
+                    scope,
+                )
+        except Exception:
+            logger.warning(
+                "Auto-compaction failed for scope=%s, will retry later.",
+                scope,
+                exc_info=True,
+            )
 
     def _store_for_scope(
         self,
