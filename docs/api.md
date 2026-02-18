@@ -6,8 +6,8 @@ Full Python API for the `MemoryMesh` class.
 
 | Method | Description |
 |---|---|
-| `remember(text, metadata, importance, decay_rate, scope, auto_importance, session_id, category, auto_categorize)` | Store a new memory |
-| `recall(query, k, min_relevance, scope, session_id)` | Recall top-k relevant memories |
+| `remember(text, metadata, importance, decay_rate, scope, auto_importance, session_id, category, auto_categorize, pin, redact, on_conflict)` | Store a new memory |
+| `recall(query, k, min_relevance, scope, session_id, category, min_importance, time_range, metadata_filter)` | Recall top-k relevant memories |
 | `forget(memory_id)` | Delete a specific memory (checks both stores) |
 | `forget_all(scope)` | Delete all memories in a scope (default: `"project"`) |
 | `search(text, k)` | Alias for `recall()` |
@@ -62,12 +62,21 @@ memory.remember(
     session_id=None,                 # Optional: group into a conversation session
     category=None,                   # Optional: "preference", "guardrail", "mistake", etc.
     auto_categorize=False,           # Optional: auto-detect category from text
+    pin=False,                       # Optional: pin memory (importance=1.0, never decays)
+    redact=False,                    # Optional: redact detected secrets before storing
+    on_conflict="keep_both",         # Optional: "keep_both", "update", or "skip"
 )
 ```
 
 When `auto_importance=True`, the `importance` parameter is ignored and MemoryMesh scores it automatically based on text analysis.
 
 When `category` is set, the `scope` is automatically determined (e.g. `"preference"` -> global, `"decision"` -> project). When `auto_categorize=True`, category is detected from text heuristics and `auto_importance` is also enabled.
+
+When `pin=True`, importance is set to `1.0` and decay rate to `0.0`, ensuring the memory never fades.
+
+When `redact=True`, detected secrets (API keys, tokens, passwords) are replaced with `[REDACTED]` before storage.
+
+The `on_conflict` parameter controls contradiction handling: `"keep_both"` (default) stores both and flags the contradiction, `"update"` replaces the most similar existing memory, `"skip"` discards the new memory if a contradiction is found (returns empty string).
 
 **Valid categories:**
 
@@ -92,10 +101,45 @@ results = memory.recall(
     min_relevance=0.0,               # Optional: minimum relevance threshold
     scope=None,                      # Optional: "project", "global", or None (both)
     session_id=None,                 # Optional: boost memories from this session
+    category=None,                   # Optional: filter by category (e.g. "decision")
+    min_importance=None,             # Optional: minimum importance threshold
+    time_range=None,                 # Optional: (start_iso, end_iso) filter
+    metadata_filter=None,            # Optional: dict of key-value pairs to match
 )
 ```
 
 When `session_id` is provided, memories from the same session receive a relevance boost in ranking.
+
+When `category`, `min_importance`, `time_range`, or `metadata_filter` are set, the candidate set is pre-filtered before ranking. This is more efficient than post-filtering, especially for large memory stores.
+
+## Privacy Guard
+
+```python
+from memorymesh.privacy import check_for_secrets, redact_secrets
+
+# Check for potential secrets
+secrets = check_for_secrets("API key: sk-abc123456789")
+# ["API key"]
+
+# Redact secrets
+clean = redact_secrets("token: sk-abc123456789")
+# "token: [REDACTED]"
+```
+
+## Contradiction Detection
+
+```python
+from memorymesh.contradiction import find_contradictions, ConflictMode
+
+# Find memories that may contradict new text
+contradictions = find_contradictions(text, embedding, store, threshold=0.75)
+# Returns: [(memory, similarity_score), ...]
+
+# ConflictMode enum
+ConflictMode.KEEP_BOTH   # Store both, flag contradiction
+ConflictMode.UPDATE       # Replace most similar existing memory
+ConflictMode.SKIP         # Discard new memory if contradiction found
+```
 
 ## compact()
 

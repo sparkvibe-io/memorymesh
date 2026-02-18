@@ -21,7 +21,7 @@ can be created per project.  No external server is needed.
 
 from __future__ import annotations
 
-__version__ = "2.0.0"
+__version__ = "3.0.0"
 
 from .auto_importance import score_importance
 from .categories import (
@@ -34,6 +34,7 @@ from .categories import (
     validate_category,
 )
 from .compaction import CompactionResult, compact
+from .contradiction import ConflictMode, find_contradictions
 from .core import MemoryMesh
 from .embeddings import (
     EmbeddingProvider,
@@ -57,6 +58,7 @@ from .formats import (
 from .html_export import generate_html
 from .mcp_server import MemoryMeshMCPServer
 from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory, validate_scope
+from .privacy import check_for_secrets, redact_secrets
 from .relevance import RelevanceEngine, RelevanceWeights
 from .report import generate_report
 from .store import MemoryStore, detect_project_root
@@ -76,6 +78,9 @@ __all__ = [
     # Compaction
     "compact",
     "CompactionResult",
+    # Contradiction detection
+    "ConflictMode",
+    "find_contradictions",
     # Encryption
     "EncryptedMemoryStore",
     "derive_key",
@@ -117,6 +122,9 @@ __all__ = [
     "sync_to_all",
     # Report
     "generate_report",
+    # Privacy
+    "check_for_secrets",
+    "redact_secrets",
     # Relevance
     "RelevanceEngine",
     "RelevanceWeights",

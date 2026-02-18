@@ -425,6 +425,66 @@ class MemoryStore:
             for row in rows
         ]
 
+    def search_filtered(
+        self,
+        category: str | None = None,
+        min_importance: float | None = None,
+        time_range: tuple[str, str] | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+        limit: int = 10_000,
+    ) -> list[Memory]:
+        """Search memories with SQL-level filters.
+
+        Args:
+            category: Filter by category in metadata.
+            min_importance: Minimum importance threshold.
+            time_range: Tuple of (start_iso, end_iso) for created_at range.
+            metadata_filter: Dict of key-value pairs to match in metadata JSON.
+            limit: Maximum results.
+
+        Returns:
+            Filtered list of Memory objects.
+        """
+        conditions: list[str] = []
+        params: list[Any] = []
+
+        if category is not None:
+            conditions.append("json_extract(metadata_json, '$.category') = ?")
+            params.append(category)
+
+        if min_importance is not None:
+            conditions.append("importance >= ?")
+            params.append(min_importance)
+
+        if time_range is not None:
+            start, end = time_range
+            conditions.append("created_at >= ? AND created_at <= ?")
+            params.extend([start, end])
+
+        if metadata_filter:
+            for key, value in metadata_filter.items():
+                # Sanitize the key to prevent SQL injection via json path.
+                safe_key = key.replace("'", "").replace('"', "").replace("\\", "")
+                conditions.append(f"json_extract(metadata_json, '$.{safe_key}') = ?")
+                if isinstance(value, str):
+                    params.append(value)
+                else:
+                    params.append(value)
+
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+        sql = f"""
+            SELECT * FROM memories
+            WHERE {where_clause}
+            ORDER BY importance DESC, updated_at DESC
+            LIMIT ?
+        """
+        params.append(limit)
+
+        with self._cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+        return [self._row_to_memory(r) for r in rows]
+
     def count(self) -> int:
         """Return the total number of stored memories.
 

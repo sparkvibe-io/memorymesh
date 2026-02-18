@@ -215,6 +215,30 @@ results = memory.recall("What does the user prefer?")
       <h3>Episodic Memory</h3>
       <p>Group by session. Recall with conversation context.</p>
     </div>
+    <div class="feature-card">
+      <h3>Pin Support</h3>
+      <p>Pin critical memories. Never decay, always top-ranked.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Privacy Guard</h3>
+      <p>Auto-detect and redact secrets before storing.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Contradiction Detection</h3>
+      <p>Catch conflicting facts. Keep, update, or skip.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Retrieval Filters</h3>
+      <p>Filter by category, importance, time range, metadata.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Web Dashboard</h3>
+      <p>Browse and search memories in your browser.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Evaluation Suite</h3>
+      <p>Quality and adversarial tests for recall accuracy.</p>
+    </div>
   </div>
 </div>
 

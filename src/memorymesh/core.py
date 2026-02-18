@@ -15,8 +15,11 @@ from .auto_importance import score_importance
 from .categories import CATEGORY_SCOPE_MAP, GLOBAL_CATEGORIES, PROJECT_CATEGORIES, validate_category
 from .categories import auto_categorize as _auto_categorize
 from .compaction import CompactionResult
+from .contradiction import ConflictMode, find_contradictions
 from .embeddings import EmbeddingProvider, NoopEmbedding, create_embedding_provider
 from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory, validate_scope
+from .privacy import check_for_secrets
+from .privacy import redact_secrets as _redact_secrets
 from .relevance import RelevanceEngine, RelevanceWeights
 from .store import _DEFAULT_GLOBAL_DB, MemoryStore, migrate_legacy_db
 
@@ -161,6 +164,9 @@ class MemoryMesh:
         session_id: str | None = None,
         category: str | None = None,
         auto_categorize: bool = False,
+        pin: bool = False,
+        redact: bool = False,
+        on_conflict: str = "keep_both",
     ) -> str:
         """Store a new memory.
 
@@ -184,9 +190,21 @@ class MemoryMesh:
             auto_categorize: If ``True`` and *category* is ``None``,
                 detect the category from the text using heuristics.
                 Also enables *auto_importance* automatically.
+            pin: If ``True``, pin this memory so it has maximum
+                importance (1.0), never decays, and is always prominent
+                in recall results.
+            redact: If ``True``, automatically redact detected secrets
+                (API keys, tokens, passwords) before storing.
+            on_conflict: How to handle contradictions with existing
+                memories.  ``"keep_both"`` (default) stores both and
+                flags the contradiction.  ``"update"`` replaces the
+                most similar existing memory.  ``"skip"`` discards the
+                new memory if a contradiction is found.
 
         Returns:
-            The unique ID of the newly created memory.
+            The unique ID of the newly created memory, or an empty
+            string if *on_conflict* is ``"skip"`` and a contradiction
+            was detected.
 
         Raises:
             RuntimeError: If *scope* is ``"project"`` but no project
@@ -211,8 +229,61 @@ class MemoryMesh:
         if auto_importance:
             importance = score_importance(text, meta)
 
+        # -- Pin handling -------------------------------------------------
+        if pin:
+            importance = 1.0
+            decay_rate = 0.0
+            meta["pinned"] = True
+
+        # -- Privacy guard ------------------------------------------------
+        secrets_found = check_for_secrets(text)
+        if secrets_found:
+            logger.warning(
+                "Potential secrets detected in memory text: %s",
+                ", ".join(secrets_found),
+            )
+            meta["has_secrets_warning"] = True
+            meta["detected_secret_types"] = secrets_found
+            if redact:
+                text = _redact_secrets(text)
+
         # Compute embedding (may be empty list for NoopEmbedding).
         emb = self._safe_embed(text)
+
+        # -- Contradiction detection ----------------------------------------
+        try:
+            conflict_mode = ConflictMode(on_conflict)
+        except ValueError:
+            conflict_mode = ConflictMode.KEEP_BOTH
+
+        contradictions = find_contradictions(
+            text=text,
+            embedding=emb if emb else None,
+            store=store,
+        )
+
+        if contradictions:
+            contradiction_ids = [m.id for m, _ in contradictions]
+            logger.warning(
+                "New memory may contradict existing memories: %s",
+                contradiction_ids,
+            )
+
+            if conflict_mode == ConflictMode.SKIP:
+                logger.info("Skipped storing memory (on_conflict=skip)")
+                return ""
+
+            if conflict_mode == ConflictMode.UPDATE:
+                most_similar_mem = contradictions[0][0]
+                store.delete(most_similar_mem.id)
+                meta["replaced_memory_id"] = most_similar_mem.id
+                logger.info(
+                    "Will replace memory %s (on_conflict=update)",
+                    most_similar_mem.id,
+                )
+
+            # For KEEP_BOTH and UPDATE, flag contradictions in metadata
+            meta["contradicts"] = contradiction_ids
 
         memory = Memory(
             text=text,
@@ -248,6 +319,10 @@ class MemoryMesh:
         min_relevance: float = 0.0,
         scope: str | None = None,
         session_id: str | None = None,
+        category: str | None = None,
+        min_importance: float | None = None,
+        time_range: tuple[str, str] | None = None,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[Memory]:
         """Recall the most relevant memories for a query.
 
@@ -269,6 +344,13 @@ class MemoryMesh:
                 to search both stores.
             session_id: Optional session identifier.  When set, memories
                 belonging to the same session are boosted in ranking.
+            category: Filter by memory category (e.g. ``"decision"``).
+            min_importance: Only return memories with importance at or
+                above this value.
+            time_range: Tuple of ``(start_iso, end_iso)`` to filter by
+                creation time.
+            metadata_filter: Dict of key-value pairs to match in
+                memory metadata.
 
         Returns:
             Up to *k* :class:`Memory` objects sorted by descending
@@ -276,24 +358,41 @@ class MemoryMesh:
         """
         query_embedding = self._safe_embed(query)
 
+        has_filters = any([category, min_importance is not None, time_range, metadata_filter])
         candidates: list[Memory] = []
 
         if scope in (None, PROJECT_SCOPE) and self._project_store:
-            project_candidates = self._get_candidates(
-                query,
-                query_embedding,
-                self._project_store,
-            )
+            if has_filters:
+                project_candidates = self._project_store.search_filtered(
+                    category=category,
+                    min_importance=min_importance,
+                    time_range=time_range,
+                    metadata_filter=metadata_filter,
+                )
+            else:
+                project_candidates = self._get_candidates(
+                    query,
+                    query_embedding,
+                    self._project_store,
+                )
             for m in project_candidates:
                 m.scope = PROJECT_SCOPE
             candidates.extend(project_candidates)
 
         if scope in (None, GLOBAL_SCOPE):
-            global_candidates = self._get_candidates(
-                query,
-                query_embedding,
-                self._global_store,
-            )
+            if has_filters:
+                global_candidates = self._global_store.search_filtered(
+                    category=category,
+                    min_importance=min_importance,
+                    time_range=time_range,
+                    metadata_filter=metadata_filter,
+                )
+            else:
+                global_candidates = self._get_candidates(
+                    query,
+                    query_embedding,
+                    self._global_store,
+                )
             for m in global_candidates:
                 m.scope = GLOBAL_SCOPE
             candidates.extend(global_candidates)

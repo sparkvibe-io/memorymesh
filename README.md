@@ -109,6 +109,23 @@ pip install "memorymesh[all]"
 - **Session Start** -- Structured context retrieval at the beginning of every AI session. Returns user profile, guardrails, common mistakes, and project context in one call.
 - **Auto-Compaction** -- Transparent deduplication that runs automatically during normal use. Like SQLite's auto-vacuum, you never need to think about it.
 - **CLI** -- Inspect, search, export, compact, and manage memories from the terminal. No Python code required.
+- **Pin Support** -- Pin critical memories so they never decay and always rank at the top. Use for guardrails and non-negotiable rules.
+- **Privacy Guard** -- Automatically detect secrets (API keys, tokens, passwords) before storing. Optionally redact them with `redact=True`.
+- **Contradiction Detection** -- Catch conflicting facts when storing new memories. Choose to keep both, update, or skip.
+- **Retrieval Filters** -- Filter recall by category, minimum importance, time range, or metadata key-value pairs.
+- **Web Dashboard** -- Browse and search all your memories in a local web UI (`memorymesh ui`).
+- **Evaluation Suite** -- Built-in tests for recall quality and adversarial robustness.
+
+---
+
+## What's New in v3
+
+- **Pin support** -- `remember("critical rule", pin=True)` sets importance to 1.0 with zero decay.
+- **Privacy guard** -- Detects API keys, GitHub tokens, JWTs, AWS keys, passwords, and more. Use `redact=True` to auto-redact before storing.
+- **Contradiction detection** -- `on_conflict="update"` replaces contradicting memories; `"skip"` discards the new one; `"keep_both"` flags it.
+- **Retrieval filters** -- `recall(query, category="decision", min_importance=0.7, time_range=(...), metadata_filter={...})`.
+- **Web dashboard** -- `memorymesh ui` launches a local browser-based memory viewer.
+- **Evaluation suite** -- 32 tests covering recall quality, adversarial inputs, scope isolation, and importance ranking.
 
 ---
 
@@ -193,7 +210,15 @@ response = openai_client.chat.completions.create(
 - Category-aware sync produces structured MEMORY.md (User Profile, Guardrails, Decisions, etc.)
 - 9 built-in categories: preference, guardrail, mistake, personality, question, decision, pattern, context, session_summary
 
-### v3.0 -- Advanced
+### v3.0 -- Intelligent Memory (Current)
+- Pin support for critical memories (zero decay, always top-ranked)
+- Privacy guard with secret detection and optional redaction
+- Contradiction detection with configurable conflict resolution
+- Advanced retrieval filters (category, importance, time range, metadata)
+- Web dashboard for browsing and searching memories (`memorymesh ui`)
+- Evaluation suite (recall quality + adversarial robustness tests)
+
+### v4.0 -- Advanced
 - Graph-based memory relationships
 - Multi-device sync
 - Plugin system for custom relevance strategies

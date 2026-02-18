@@ -163,6 +163,24 @@ This auto-detects your installed AI tools and configures all of them.
 
 ## Core Concepts
 
+### Understanding Scopes
+
+MemoryMesh organizes memories into two scopes:
+
+- **Global** = your **backpack** (follows you everywhere). Carries your preferences, guardrails, mistakes you have learned from, and personality traits. These apply no matter what project you are working on.
+- **Project** = your **desk** (stays in one project). Holds architecture decisions, code patterns, project-specific context, and session summaries. These are relevant only to the current project.
+
+When you call `recall()`, both scopes are searched by default and the results are merged. When you call `forget_all()`, only the project scope is cleared -- your global memories are protected.
+
+**Best practices for what to remember:**
+
+| Store in **global** scope | Store in **project** scope | Do **not** store |
+|---|---|---|
+| Coding style preferences | Architecture decisions | Trivial one-time facts |
+| Rules you always follow | Code patterns and conventions | Temporary state |
+| Your identity and traits | Project-specific context | Verbatim code snippets |
+| Recurring mistakes | Session summaries | Anything already in CLAUDE.md |
+
 ### Dual-Store Architecture
 
 MemoryMesh uses two SQLite databases:

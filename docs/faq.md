@@ -52,6 +52,66 @@ The encrypted storage feature protects against casual inspection of the database
 
 On a typical machine: `remember()` runs at ~50us/op, `recall()` under 700us even at 5,000 memories (keyword mode), concurrent throughput hits ~3,800 ops/s with 4 threads. Run `make bench` to benchmark on your hardware.
 
+## What is the difference between project and global scope?
+
+**Global** scope is your backpack -- it follows you to every project. It stores preferences, guardrails, mistakes, and personality traits. The database lives at `~/.memorymesh/global.db`.
+
+**Project** scope is your desk -- it stays in one project. It stores architecture decisions, code patterns, and project context. The database lives at `<project>/.memorymesh/memories.db`.
+
+`recall()` searches both scopes by default. `forget_all()` only clears the project scope unless you explicitly pass `scope="global"`.
+
+## How do I store user preferences?
+
+Use the `"preference"` category, which auto-routes to global scope:
+
+```python
+memory.remember("I prefer dark mode", category="preference")
+memory.remember("Always use TypeScript over JavaScript", category="preference")
+```
+
+Or use `auto_categorize=True` and let MemoryMesh detect it from text:
+
+```python
+memory.remember("I always use black for formatting", auto_categorize=True)
+```
+
+## What are guardrails?
+
+Guardrails are rules the AI must follow. They are stored in global scope (available across all projects) and are surfaced at the start of every session via `session_start()`.
+
+```python
+memory.remember("Never auto-commit without asking", category="guardrail")
+memory.remember("Always run tests before suggesting code is complete", category="guardrail")
+```
+
+## How does contradiction detection work?
+
+When you call `remember()`, MemoryMesh can check for existing memories that say something different. For example, if you have "Use PostgreSQL for production" and then store "Use MySQL for production", that is a contradiction.
+
+Control behavior with the `on_conflict` parameter:
+
+- `"keep_both"` (default) -- stores both memories and flags the contradiction in metadata.
+- `"update"` -- replaces the most similar existing memory with the new one.
+- `"skip"` -- silently discards the new memory if a contradiction is found.
+
+Contradiction detection uses embedding similarity (when available) or keyword overlap as a fallback.
+
+## What secrets does the privacy guard detect?
+
+MemoryMesh scans for: API keys (`sk-...`, `pk-...`), GitHub tokens (`ghp_...`), passwords (`password: ...`), private keys (`-----BEGIN PRIVATE KEY-----`), JWT tokens (`eyJ...`), AWS access keys (`AKIA...`), and Slack tokens (`xoxb-...`).
+
+When secrets are detected, a warning is logged and metadata flags are set. Use `redact=True` on `remember()` to automatically replace secrets with `[REDACTED]` before storage.
+
+## How do I pin important memories?
+
+Use `pin=True` on `remember()`:
+
+```python
+memory.remember("NEVER deploy on Fridays", pin=True)
+```
+
+Pinned memories have importance `1.0`, never decay, and always rank highly in recall results. Use pinning for critical guardrails and non-negotiable rules.
+
 ---
 
 [Back to Home](index.md)

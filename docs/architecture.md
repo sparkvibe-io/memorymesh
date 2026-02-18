@@ -37,6 +37,36 @@ System design overview for MemoryMesh.
 +-----------------------------------------------------+
 ```
 
+## Understanding Scopes
+
+```
+~/.memorymesh/global.db          <project>/.memorymesh/memories.db
+┌─────────────────────┐          ┌─────────────────────┐
+│    GLOBAL STORE      │          │   PROJECT STORE      │
+│                      │          │                      │
+│  preferences         │          │  decisions           │
+│  guardrails          │          │  patterns            │
+│  mistakes            │          │  context             │
+│  personality         │          │  session summaries   │
+│  questions           │          │                      │
+└─────────────────────┘          └─────────────────────┘
+         │                                  │
+         └────────── recall() ──────────────┘
+                  searches both
+```
+
+- **Global store** (`~/.memorymesh/global.db`) -- user-wide preferences, guardrails, mistakes, personality, and recurring questions. Shared across all projects.
+- **Project store** (`<project>/.memorymesh/memories.db`) -- architecture decisions, code patterns, project context, and session summaries. Isolated per project.
+
+`recall()` merges results from both stores by default. `forget_all()` clears only the project store unless you explicitly pass `scope="global"`.
+
+## Memory Lifecycle
+
+1. **remember()** -- Text is embedded (if an embedding provider is configured), optionally scanned for secrets, checked for contradictions, and stored in the appropriate SQLite database.
+2. **recall()** -- The query is embedded, then both vector similarity search and keyword fallback are used to find candidates. Results are ranked by a composite score of semantic similarity, recency, importance, and access frequency.
+3. **forget()** -- Deletes a specific memory by ID from whichever store contains it.
+4. **Time decay** -- Each memory has an importance score and a decay rate. Over time, `new_importance = importance * exp(-decay_rate * days_since_update)`. Pinned memories have `decay_rate=0` and never fade. Frequently accessed memories stay relevant because recall updates the `updated_at` timestamp.
+
 ## Key Modules
 
 | Module | Purpose |

@@ -270,6 +270,10 @@ def _cmd_show(args: argparse.Namespace) -> int:
     print(f"{'Updated:':<15}{mem.updated_at.isoformat()}")
     print(f"{'Metadata:':<15}{meta_str}")
     print(f"{'Has Embedding:':<15}{emb_info}")
+    source = mem.metadata.get("source")
+    if source:
+        tool = mem.metadata.get("tool", "")
+        print(f"{'Source:':<15}{source}{f' ({tool})' if tool else ''}")
     print()
     print("Text:")
     # Indent the text by 2 spaces.
@@ -568,6 +572,22 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_ui(args: argparse.Namespace) -> int:
+    """Handle the ``ui`` subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    from .dashboard import run_dashboard
+
+    mesh = _build_mesh(args)
+    run_dashboard(mesh, port=args.port, open_browser=not args.no_open)
+    return 0
+
+
 def _cmd_compact(args: argparse.Namespace) -> int:
     """Handle the ``compact`` subcommand.
 
@@ -779,6 +799,20 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Scope for report (default: all).",
     )
 
+    # -- ui -----------------------------------------------------------
+    p_ui = subparsers.add_parser("ui", help="Launch the web dashboard.")
+    p_ui.add_argument(
+        "--port",
+        type=int,
+        default=8765,
+        help="Port to run the dashboard on (default: 8765).",
+    )
+    p_ui.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Don't automatically open the browser.",
+    )
+
     # -- compact ------------------------------------------------------
     p_compact = subparsers.add_parser(
         "compact", help="Merge duplicate and near-duplicate memories."
@@ -841,6 +875,7 @@ def main(argv: list[str] | None = None) -> int:
         "formats": _cmd_formats,
         "report": _cmd_report,
         "compact": _cmd_compact,
+        "ui": _cmd_ui,
     }
 
     handler = commands.get(args.command)

@@ -322,6 +322,112 @@ result = memory.compact(scope="project", dry_run=True)
 print(f"Would merge {result.merged_count} duplicates")
 ```
 
+## Pin Support
+
+Pin critical memories so they never fade and always appear in recall results:
+
+```python
+memory.remember("NEVER auto-commit without asking the user", pin=True)
+```
+
+When `pin=True`:
+
+- Importance is set to `1.0` (maximum).
+- Decay rate is set to `0.0` (never fades).
+- The metadata field `pinned: true` is set for identification.
+
+Use pinning for guardrails, non-negotiable rules, and critical identity facts that should always influence the AI's behavior.
+
+## Privacy Guard
+
+MemoryMesh scans all text for potential secrets before storing. Detected patterns include:
+
+| Pattern | Example |
+|---|---|
+| API keys | `sk-abc123...`, `pk-xyz...` |
+| GitHub tokens | `ghp_...`, `gho_...` |
+| Passwords | `password: mySecret` |
+| Private keys | `-----BEGIN PRIVATE KEY-----` |
+| JWT tokens | `eyJhbG...` |
+| AWS access keys | `AKIA...` |
+| Slack tokens | `xoxb-...` |
+
+When secrets are detected, a warning is logged and metadata flags (`has_secrets_warning`, `detected_secret_types`) are added. To automatically redact secrets before storing:
+
+```python
+memory.remember("API key is sk-abc123456789", redact=True)
+# Stored text: "API key is [REDACTED]"
+```
+
+You can also use the functions directly:
+
+```python
+from memorymesh.privacy import check_for_secrets, redact_secrets
+
+secrets = check_for_secrets("my password: hunter2")
+# ["password"]
+
+clean = redact_secrets("token: sk-abc123456789")
+# "token: [REDACTED]"
+```
+
+## Contradiction Detection
+
+When storing a new memory, MemoryMesh can check for existing memories that contradict it. Control the behavior with the `on_conflict` parameter:
+
+```python
+# Default: store both, flag the contradiction in metadata
+memory.remember("Use PostgreSQL for production", on_conflict="keep_both")
+
+# Replace the most similar existing memory
+memory.remember("Use PostgreSQL for production", on_conflict="update")
+
+# Don't store if a contradiction is found
+memory.remember("Use PostgreSQL for production", on_conflict="skip")
+```
+
+The three conflict modes:
+
+| Mode | Behavior |
+|---|---|
+| `keep_both` | Store the new memory alongside existing ones. Adds `has_contradiction` flag to metadata. |
+| `update` | Replace the most similar existing memory with the new text. |
+| `skip` | Discard the new memory if a contradiction is found. Returns empty string. |
+
+You can also find contradictions directly:
+
+```python
+from memorymesh.contradiction import find_contradictions, ConflictMode
+
+# Find memories that may contradict new text
+contradictions = find_contradictions(text, embedding, store, threshold=0.75)
+# Returns: [(memory, similarity_score), ...]
+```
+
+## Retrieval Filters
+
+`recall()` supports additional filters to narrow down results:
+
+```python
+results = memory.recall(
+    "auth decisions",
+    k=10,
+    category="decision",           # Only return memories with this category
+    min_importance=0.7,            # Only return memories with importance >= 0.7
+    time_range=("2026-01-01", "2026-02-01"),  # Filter by creation date
+    metadata_filter={"pinned": True},         # Match specific metadata keys
+)
+```
+
+| Filter | Type | Description |
+|---|---|---|
+| `category` | `str` | Only return memories with this category in metadata |
+| `min_importance` | `float` | Minimum importance threshold |
+| `time_range` | `tuple[str, str]` | ISO-8601 date range `(start, end)` for creation time |
+| `metadata_filter` | `dict` | Key-value pairs that must match in memory metadata |
+
+Filters are applied before ranking, so they reduce the candidate set rather than post-filtering results.
+
 ---
 
 [Back to Home](index.md)

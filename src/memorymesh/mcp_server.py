@@ -57,7 +57,7 @@ MCP_PROTOCOL_VERSION = "2024-11-05"
 
 SERVER_INFO = {
     "name": "memorymesh",
-    "version": "2.0.0",
+    "version": "3.0.0",
 }
 
 # ---------------------------------------------------------------------------
@@ -160,6 +160,30 @@ TOOLS: list[dict[str, Any]] = [
                         "Also enables auto-importance scoring. Default: false."
                     ),
                 },
+                "pin": {
+                    "type": "boolean",
+                    "description": (
+                        "Pin this memory. Pinned memories have maximum importance (1.0), "
+                        "never decay, and are always prominent in recall. Default: false."
+                    ),
+                },
+                "redact_secrets": {
+                    "type": "boolean",
+                    "description": (
+                        "If true, automatically redact detected secrets (API keys, tokens, "
+                        "passwords) before storing. Default: false."
+                    ),
+                },
+                "on_conflict": {
+                    "type": "string",
+                    "enum": ["keep_both", "update", "skip"],
+                    "description": (
+                        "How to handle contradictions with existing memories. "
+                        "'keep_both' (default) stores both and flags the contradiction. "
+                        "'update' replaces the most similar existing memory. "
+                        "'skip' discards the new memory if a contradiction is found."
+                    ),
+                },
             },
             "required": ["text"],
         },
@@ -191,6 +215,16 @@ TOOLS: list[dict[str, Any]] = [
                         "Limit search to a specific scope. Omit to search both "
                         "project and global memories (default)."
                     ),
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Filter by memory category.",
+                },
+                "min_importance": {
+                    "type": "number",
+                    "description": "Only return memories with importance >= this value.",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
                 },
             },
             "required": ["query"],
@@ -298,6 +332,7 @@ class MemoryMeshMCPServer:
             self._mesh = self._create_mesh_from_env()
         self._initialized = False
         self._project_root: str | None = None
+        self._client_name: str = "unknown"
         logger.info("MemoryMeshMCPServer created with mesh=%r", self._mesh)
 
     # ------------------------------------------------------------------
@@ -484,6 +519,7 @@ class MemoryMeshMCPServer:
         self._initialized = True
 
         client_name = params.get("clientInfo", {}).get("name", "unknown")
+        self._client_name = client_name
         logger.info("Client initialized: %s", client_name)
 
         # Detect project root from MCP roots list.
@@ -719,6 +755,14 @@ class MemoryMeshMCPServer:
 
         category = args.get("category")
         auto_categorize_flag = args.get("auto_categorize", False)
+        pin = args.get("pin", False)
+        redact = args.get("redact_secrets", False)
+        on_conflict = args.get("on_conflict", "keep_both")
+
+        # Auto-populate provenance metadata.
+        metadata.setdefault("source", "mcp")
+        if self._client_name:
+            metadata.setdefault("tool", self._client_name)
 
         try:
             memory_id = self._mesh.remember(
@@ -728,15 +772,32 @@ class MemoryMeshMCPServer:
                 scope=scope,
                 category=category,
                 auto_categorize=auto_categorize_flag,
+                pin=pin,
+                redact=redact,
+                on_conflict=on_conflict,
             )
         except RuntimeError as exc:
             return self._tool_error(str(exc))
 
-        result = {
+        result: dict[str, Any] = {
             "memory_id": memory_id,
             "scope": scope,
             "message": f"Remembered: {text[:80]}{'...' if len(text) > 80 else ''}",
         }
+
+        # Check if contradiction was flagged
+        if memory_id:
+            mem = self._mesh.get(memory_id)
+            if mem and mem.metadata.get("contradicts"):
+                contradiction_count = len(mem.metadata["contradicts"])
+                result["contradictions"] = mem.metadata["contradicts"]
+                result["message"] += (
+                    f" (contradicts {contradiction_count} existing "
+                    f"{'memory' if contradiction_count == 1 else 'memories'})"
+                )
+        elif on_conflict == "skip":
+            result["message"] = "Memory skipped due to contradiction (on_conflict=skip)"
+
         return self._tool_success(json.dumps(result, indent=2))
 
     def _tool_recall(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -762,7 +823,20 @@ class MemoryMeshMCPServer:
         if scope is not None and scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
             return self._tool_error("'scope' must be 'project', 'global', or omitted.")
 
-        memories = self._mesh.recall(query=query, k=k, scope=scope)
+        category = args.get("category")
+        min_importance = args.get("min_importance")
+        if min_importance is not None:
+            if not isinstance(min_importance, (int, float)):
+                return self._tool_error("'min_importance' must be a number.")
+            min_importance = max(0.0, min(1.0, float(min_importance)))
+
+        memories = self._mesh.recall(
+            query=query,
+            k=k,
+            scope=scope,
+            category=category,
+            min_importance=min_importance,
+        )
 
         results = []
         for mem in memories:

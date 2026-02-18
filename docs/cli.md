@@ -17,6 +17,23 @@ The `memorymesh` CLI lets you inspect, manage, and sync your memory stores from 
 
 Most commands accept `--scope project|global|all` to filter by store. Run `memorymesh <command> --help` for full options.
 
+## `memorymesh ui`
+
+Launch a web-based dashboard for viewing and managing memories.
+
+```bash
+memorymesh ui [--port PORT] [--no-open]
+```
+
+Options:
+
+| Option | Default | Description |
+|---|---|---|
+| `--port PORT` | `8765` | Port to run the web server on |
+| `--no-open` | | Do not automatically open the browser |
+
+The dashboard provides a searchable, filterable view of all memories across both project and global stores. It runs entirely locally -- no data leaves your machine.
+
 ## Compaction
 
 The `compact` command detects and merges similar or redundant memories:

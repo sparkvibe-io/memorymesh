@@ -70,6 +70,10 @@ node_modules/
 # MkDocs site output
 site/
 
+# Internal working folders (not for public repo)
+publicity/
+critique/
+
 # Build artifacts
 *.so
 *.dylib
