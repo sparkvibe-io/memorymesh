@@ -173,34 +173,66 @@ class TestProvenanceMetadata:
 
     def test_tool_auto_populated_after_init(self, mesh: MemoryMesh, tmp_dir: str) -> None:
         server = MemoryMeshMCPServer(mesh=mesh)
-        # Simulate initialize with clientInfo
-        server._handle_initialize(
-            {
-                "clientInfo": {"name": "claude-code"},
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-            }
-        )
-        # The mesh was re-created during init, need to set up project path
-        result = server._tool_remember({"text": "Fact after init"})
-        assert "isError" not in result
-        content_text = result["content"][0]["text"]
-        data = json.loads(content_text)
-        mid = data["memory_id"]
-        mem = server._mesh.get(mid)
-        assert mem is not None
-        assert mem.metadata.get("tool") == "claude-code"
+        # Point env vars to temp dir so _handle_initialize doesn't recreate
+        # the mesh using the real project database.
+        db_path = os.path.join(tmp_dir, "reinit_project.db")
+        global_path = os.path.join(tmp_dir, "reinit_global.db")
+        env_patch = {
+            "MEMORYMESH_PATH": db_path,
+            "MEMORYMESH_GLOBAL_PATH": global_path,
+        }
+        old_env = {k: os.environ.get(k) for k in env_patch}
+        os.environ.update(env_patch)
+        try:
+            server._handle_initialize(
+                {
+                    "clientInfo": {"name": "claude-code"},
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                }
+            )
+            result = server._tool_remember({"text": "Fact after init"})
+            assert "isError" not in result
+            content_text = result["content"][0]["text"]
+            data = json.loads(content_text)
+            mid = data["memory_id"]
+            mem = server._mesh.get(mid)
+            assert mem is not None
+            assert mem.metadata.get("tool") == "claude-code"
+        finally:
+            for k, v in old_env.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
 
-    def test_client_name_stored_on_init(self, mesh: MemoryMesh) -> None:
+    def test_client_name_stored_on_init(self, mesh: MemoryMesh, tmp_dir: str) -> None:
         server = MemoryMeshMCPServer(mesh=mesh)
-        server._handle_initialize(
-            {
-                "clientInfo": {"name": "cursor"},
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-            }
-        )
-        assert server._client_name == "cursor"
+        # Point env vars to temp dir so _handle_initialize doesn't recreate
+        # the mesh using the real project database.
+        db_path = os.path.join(tmp_dir, "reinit_project2.db")
+        global_path = os.path.join(tmp_dir, "reinit_global2.db")
+        env_patch = {
+            "MEMORYMESH_PATH": db_path,
+            "MEMORYMESH_GLOBAL_PATH": global_path,
+        }
+        old_env = {k: os.environ.get(k) for k in env_patch}
+        os.environ.update(env_patch)
+        try:
+            server._handle_initialize(
+                {
+                    "clientInfo": {"name": "cursor"},
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                }
+            )
+            assert server._client_name == "cursor"
+        finally:
+            for k, v in old_env.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
 
     def test_user_metadata_not_overwritten(self, mcp_server: MemoryMeshMCPServer) -> None:
         # If user provides their own source, it should be preserved.
