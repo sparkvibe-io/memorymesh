@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 
 import pytest
 
@@ -10,11 +11,13 @@ from memorymesh import MemoryMesh
 
 
 @pytest.fixture()
-def mesh(tmp_path: str) -> MemoryMesh:
+def mesh(tmp_path: str) -> Generator[MemoryMesh, None, None]:
     """Create a MemoryMesh with both project and global stores."""
     project_db = os.path.join(str(tmp_path), "project", "memories.db")
     global_db = os.path.join(str(tmp_path), "global", "global.db")
-    return MemoryMesh(path=project_db, global_path=global_db, embedding="none")
+    m = MemoryMesh(path=project_db, global_path=global_db, embedding="none")
+    yield m
+    m.close()
 
 
 class TestCategoryRemember:
@@ -174,9 +177,11 @@ class TestSessionStart:
 
     def test_no_project_store_still_works(self, tmp_path: str) -> None:
         global_db = os.path.join(str(tmp_path), "global2", "global.db")
-        mesh = MemoryMesh(path=None, global_path=global_db, embedding="none")
-
-        mesh.remember("I prefer dark mode", category="preference", scope="global")
-        result = mesh.session_start()
-        assert "I prefer dark mode" in result["user_profile"]
-        assert result["project_context"] == []
+        m = MemoryMesh(path=None, global_path=global_db, embedding="none")
+        try:
+            m.remember("I prefer dark mode", category="preference", scope="global")
+            result = m.session_start()
+            assert "I prefer dark mode" in result["user_profile"]
+            assert result["project_context"] == []
+        finally:
+            m.close()

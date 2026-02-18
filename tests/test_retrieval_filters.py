@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from collections.abc import Generator
 from datetime import datetime, timezone
 
 import pytest
@@ -25,7 +26,7 @@ def tmp_dir():
 
 
 @pytest.fixture
-def store(tmp_dir: str) -> MemoryStore:
+def store(tmp_dir: str) -> Generator[MemoryStore, None, None]:
     """Create a MemoryStore with test data."""
     db_path = os.path.join(tmp_dir, "test.db")
     s = MemoryStore(path=db_path)
@@ -67,11 +68,12 @@ def store(tmp_dir: str) -> MemoryStore:
     for m in memories:
         s.save(m)
 
-    return s
+    yield s
+    s.close()
 
 
 @pytest.fixture
-def mesh(tmp_dir: str) -> MemoryMesh:
+def mesh(tmp_dir: str) -> Generator[MemoryMesh, None, None]:
     """Create a MemoryMesh with test data."""
     db_path = os.path.join(tmp_dir, "project.db")
     global_path = os.path.join(tmp_dir, "global.db")
@@ -84,7 +86,8 @@ def mesh(tmp_dir: str) -> MemoryMesh:
     m.remember("Fixed off-by-one error", category="mistake", importance=0.6)
     m.remember("Low importance context", category="context", importance=0.2)
 
-    return m
+    yield m
+    m.close()
 
 
 # ---------------------------------------------------------------------------

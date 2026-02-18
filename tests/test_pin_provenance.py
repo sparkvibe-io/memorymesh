@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Generator
 
 import pytest
 
@@ -24,11 +25,13 @@ def tmp_dir():
 
 
 @pytest.fixture
-def mesh(tmp_dir: str) -> MemoryMesh:
+def mesh(tmp_dir: str) -> Generator[MemoryMesh, None, None]:
     """Create a MemoryMesh instance for testing."""
     db_path = os.path.join(tmp_dir, "project.db")
     global_path = os.path.join(tmp_dir, "global.db")
-    return MemoryMesh(path=db_path, global_path=global_path, embedding="none")
+    m = MemoryMesh(path=db_path, global_path=global_path, embedding="none")
+    yield m
+    m.close()
 
 
 @pytest.fixture

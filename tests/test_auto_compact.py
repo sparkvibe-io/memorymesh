@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 
 import pytest
 
@@ -10,13 +11,14 @@ from memorymesh import MemoryMesh
 
 
 @pytest.fixture()
-def mesh(tmp_path: str) -> MemoryMesh:
+def mesh(tmp_path: str) -> Generator[MemoryMesh, None, None]:
     """Create a MemoryMesh with both stores and low compact interval."""
     project_db = os.path.join(str(tmp_path), "project", "memories.db")
     global_db = os.path.join(str(tmp_path), "global", "global.db")
     m = MemoryMesh(path=project_db, global_path=global_db, embedding="none")
     m.compact_interval = 5  # trigger compaction every 5 writes for testing
-    return m
+    yield m
+    m.close()
 
 
 class TestAutoCompaction:

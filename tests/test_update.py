@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from collections.abc import Generator
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,19 +26,23 @@ def tmp_dir():
 
 
 @pytest.fixture()
-def mesh(tmp_dir: str) -> MemoryMesh:
+def mesh(tmp_dir: str) -> Generator[MemoryMesh, None, None]:
     """Create a MemoryMesh with both project and global stores using NoopEmbedding."""
-    return MemoryMesh(
+    m = MemoryMesh(
         path=os.path.join(tmp_dir, "project", "memories.db"),
         global_path=os.path.join(tmp_dir, "global", "global.db"),
         embedding="none",
     )
+    yield m
+    m.close()
 
 
 @pytest.fixture()
-def store(tmp_dir: str) -> MemoryStore:
+def store(tmp_dir: str) -> Generator[MemoryStore, None, None]:
     """Create a standalone MemoryStore for low-level tests."""
-    return MemoryStore(path=os.path.join(tmp_dir, "store", "test.db"))
+    s = MemoryStore(path=os.path.join(tmp_dir, "store", "test.db"))
+    yield s
+    s.close()
 
 
 # ---------------------------------------------------------------------------
@@ -205,17 +210,20 @@ class TestCoreUpdate:
         mock_embedder = MagicMock(spec=EmbeddingProvider)
         mock_embedder.embed.return_value = [0.1, 0.2, 0.3]
 
-        mesh = MemoryMesh(
+        m = MemoryMesh(
             path=os.path.join(tmp_dir, "emb_project", "memories.db"),
             global_path=os.path.join(tmp_dir, "emb_global", "global.db"),
             embedding=mock_embedder,
         )
-        mid = mesh.remember("first text", scope="project")
-        initial_call_count = mock_embedder.embed.call_count
+        try:
+            mid = m.remember("first text", scope="project")
+            initial_call_count = mock_embedder.embed.call_count
 
-        mesh.update(mid, text="second text")
-        # embed should have been called again for the new text.
-        assert mock_embedder.embed.call_count > initial_call_count
+            m.update(mid, text="second text")
+            # embed should have been called again for the new text.
+            assert mock_embedder.embed.call_count > initial_call_count
+        finally:
+            m.close()
 
     def test_update_preserves_created_at(self, mesh: MemoryMesh) -> None:
         """Updating a memory should not change its created_at timestamp."""

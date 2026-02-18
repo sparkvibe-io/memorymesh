@@ -10,6 +10,7 @@ import base64
 import json
 import os
 import sqlite3
+from collections.abc import Generator
 
 import pytest
 
@@ -248,15 +249,19 @@ class TestEncryptedMemoryStore:
     """Tests for the EncryptedMemoryStore wrapper."""
 
     @pytest.fixture
-    def store(self, tmp_path):
+    def store(self, tmp_path) -> Generator[EncryptedMemoryStore, None, None]:
         """Create an EncryptedMemoryStore backed by a temp directory."""
         raw_store = MemoryStore(path=tmp_path / "encrypted.db")
-        return EncryptedMemoryStore(raw_store, "test-password-123")
+        s = EncryptedMemoryStore(raw_store, "test-password-123")
+        yield s
+        s.close()
 
     @pytest.fixture
-    def raw_store(self, tmp_path):
+    def raw_store(self, tmp_path) -> Generator[MemoryStore, None, None]:
         """Create a raw (unencrypted) MemoryStore for comparison."""
-        return MemoryStore(path=tmp_path / "encrypted.db")
+        s = MemoryStore(path=tmp_path / "encrypted.db")
+        yield s
+        s.close()
 
     def test_save_and_get_round_trip(self, store) -> None:
         """Saving and getting a memory returns the original content."""

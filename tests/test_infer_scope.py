@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from collections.abc import Generator
 
 import pytest
 
@@ -131,10 +132,12 @@ def tmp_dir():
 
 
 @pytest.fixture
-def mesh(tmp_dir: str) -> MemoryMesh:
+def mesh(tmp_dir: str) -> Generator[MemoryMesh, None, None]:
     db_path = os.path.join(tmp_dir, "project.db")
     global_path = os.path.join(tmp_dir, "global.db")
-    return MemoryMesh(path=db_path, global_path=global_path, embedding="none")
+    m = MemoryMesh(path=db_path, global_path=global_path, embedding="none")
+    yield m
+    m.close()
 
 
 class TestRememberScopeInference:
@@ -173,9 +176,7 @@ class TestRememberScopeInference:
         assert mem.scope == "project"
 
     def test_name_pattern_goes_global(self, mesh: MemoryMesh) -> None:
-        mid = mesh.remember(
-            "Krishna's patterns: tests CLI hands-on, wants brutal honesty"
-        )
+        mid = mesh.remember("Krishna's patterns: tests CLI hands-on, wants brutal honesty")
         mem = mesh.get(mid)
         assert mem is not None
         assert mem.scope == "global"
