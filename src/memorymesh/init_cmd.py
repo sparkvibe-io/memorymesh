@@ -36,25 +36,36 @@ _CLAUDE_MD_SECTION_HEADING = "## Memory (MemoryMesh)"
 _CLAUDE_MD_SECTION = """\
 ## Memory (MemoryMesh)
 
-MemoryMesh is configured as an MCP tool in this project. You MUST use it proactively -- it provides persistent memory across conversations.
+MemoryMesh is configured as an MCP tool in this project. It adds persistent,
+structured, cross-tool memory on top of your existing memory system. Use it
+alongside your default memory -- it enhances, not replaces.
+
+### At the start of every conversation
+
+Call `mcp__memorymesh__recall` with a summary of the user's request to load
+prior context, decisions, and patterns. If `session_start` is available,
+call it to load user profile, guardrails, and project context.
 
 ### When to `recall`
 
-- **Start of every conversation**: Call `recall` with a summary of the user's request to check for relevant prior context.
-- **Before making architectural decisions**: Check if this was decided before.
+- **Start of every conversation**: Check for relevant prior context.
+- **Before making decisions**: Check if this was decided before.
 - **When debugging**: Check if this problem was encountered previously.
 
 ### When to `remember`
 
-- **After completing a task**: Store key decisions, patterns discovered, and architectural choices.
-- **When the user teaches you something**: Immediately remember it.
-- **After fixing a non-trivial bug**: Remember the root cause and fix.
-- **When discovering undocumented patterns**: Store conventions found in the codebase.
+- **When the user says "remember this"**: Store it with a category.
+- **After completing a task**: Store key decisions and patterns.
+  Use `category` to classify: `"decision"`, `"pattern"`, `"context"`.
+- **When the user teaches you something**: Use `category: "preference"`
+  or `category: "guardrail"` -- these auto-route to global scope.
+- **After fixing a non-trivial bug**: Use `category: "mistake"`.
 
 ### Scope guidance
 
-- Use `scope: "project"` for project-specific decisions, architecture, and patterns.
-- Use `scope: "global"` for user preferences, identity, and cross-project facts.
+Categories auto-route scope. If not using categories:
+- Use `scope: "project"` for project-specific decisions.
+- Use `scope: "global"` for user preferences and identity.
 """
 
 

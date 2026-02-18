@@ -69,31 +69,34 @@ make all           # Run lint + test + typecheck
 
 ## Memory (MemoryMesh)
 
-MemoryMesh is configured as an MCP tool in this project. You MUST use it proactively -- it is the project's own product and dogfooding it is essential.
+MemoryMesh is configured as an MCP tool in this project. It adds persistent, structured, cross-tool memory on top of your existing memory system. Use it alongside your default memory -- it enhances, not replaces.
+
+### At the start of every conversation
+
+Call `mcp__memorymesh__recall` with a summary of the user's request to load prior context, decisions, patterns, and past mistakes. This prevents repeating settled decisions and re-encountering solved problems.
+
+If `session_start` is available, call it to load the full user profile, guardrails, and project context.
 
 ### When to `recall`
 
-- **Start of every conversation**: Call `recall` with a summary of the user's request to check for relevant prior context, decisions, patterns, or past mistakes.
-- **Before making architectural decisions**: Recall to check if this was decided before.
-- **When debugging**: Recall to check if this problem or error was encountered previously.
-- **When unsure about conventions**: Recall to check if there's a stored preference or pattern.
+- **Start of every conversation**: Check for relevant prior context before doing any work.
+- **Before making architectural decisions**: Check if this was decided before.
+- **When debugging**: Check if this problem or error was encountered previously.
+- **When unsure about conventions**: Check for stored patterns or preferences.
 
 ### When to `remember`
 
-- **After completing a task**: Store key decisions, patterns discovered, and architectural choices made.
-- **When the user teaches you something**: Immediately remember it (scope: global for preferences, project for project-specific facts).
-- **After fixing a non-trivial bug**: Remember the root cause and fix so it's not repeated.
-- **When discovering undocumented patterns**: Store conventions found in the codebase.
-- **After a multi-step investigation**: Remember the conclusion so future sessions don't repeat the work.
-
-### What to remember
-
-- Architectural decisions and their rationale
-- Bug fixes, root causes, and solutions that took multiple attempts
-- User preferences confirmed during work
-- File patterns and conventions discovered
-- Implementation approaches that worked (or didn't)
-- Test strategies and edge cases found
+- **When the user says "remember this"**: Store it in MemoryMesh with an appropriate category.
+- **After completing a task**: Store key decisions, patterns discovered, and architectural choices.
+- **When the user teaches you something**: Immediately remember it with a category:
+  - User preferences, style choices → `category: "preference"` (auto-routes to global scope)
+  - Rules to follow → `category: "guardrail"` (auto-routes to global scope)
+  - Past mistakes → `category: "mistake"` (auto-routes to global scope)
+  - Architecture decisions → `category: "decision"` (auto-routes to project scope)
+  - Code conventions → `category: "pattern"` (auto-routes to project scope)
+  - Project facts → `category: "context"` (auto-routes to project scope)
+- **After fixing a non-trivial bug**: Remember the root cause and fix. Use `category: "mistake"`.
+- **When discovering undocumented patterns**: Use `category: "pattern"`.
 
 ### What NOT to remember
 
@@ -106,10 +109,7 @@ MemoryMesh is configured as an MCP tool in this project. You MUST use it proacti
 
 - Use `scope: "project"` for project-specific decisions, architecture, and patterns.
 - Use `scope: "global"` for user preferences, identity, and cross-project facts.
-
-### Priority
-
-- **Prefer MemoryMesh over auto-memory files** for persistent knowledge storage. MemoryMesh is the product we are building -- using it validates the product and builds a useful knowledge base.
+- Categories auto-route scope -- when using a category, you don't need to set scope manually.
 
 ## Code Conventions
 

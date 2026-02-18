@@ -289,7 +289,7 @@ No API keys are needed for the default setup. The MCP server uses keyword matchi
 
 ## Teaching Your AI to Use MemoryMesh
 
-Installing the MCP server gives your AI assistant the *ability* to use memory. But LLMs do not use tools proactively unless you tell them to. You need to add instructions to your AI tool's configuration file explaining **when** and **how** to use MemoryMesh.
+Installing the MCP server gives your AI assistant the *ability* to use memory. But LLMs do not use tools proactively unless you tell them to. MemoryMesh works **alongside** your AI tool's existing memory -- it adds structured, searchable, cross-tool persistence on top of what's already there.
 
 The fastest way to set everything up is:
 
@@ -297,7 +297,7 @@ The fastest way to set everything up is:
 memorymesh init
 ```
 
-This auto-detects which AI tools you have installed and configures all of them. You can also target a single tool:
+This auto-detects which AI tools you have installed and adds MemoryMesh instructions to each one. You can also target a single tool:
 
 ```bash
 memorymesh init --only claude
@@ -314,22 +314,25 @@ Add a `## Memory (MemoryMesh)` section to your project's `CLAUDE.md`:
 ```markdown
 ## Memory (MemoryMesh)
 
-MemoryMesh is configured as an MCP tool in this project. You MUST use it
-proactively -- it provides persistent memory across conversations.
+MemoryMesh is configured as an MCP tool in this project. It adds persistent,
+structured, cross-tool memory on top of your existing memory system. Use it
+alongside your default memory -- it enhances, not replaces.
 
-### When to `session_start`
+### At the start of every conversation
 
-- **Start of every conversation**: Call `session_start` to load your user
-  profile, guardrails, and project context.
+Call `mcp__memorymesh__recall` with a summary of the user's request to load
+prior context, decisions, and patterns. If `session_start` is available,
+call it to load user profile, guardrails, and project context.
 
 ### When to `recall`
 
-- **Before making architectural decisions**: Check if this was decided before.
+- **Start of every conversation**: Check for relevant prior context.
+- **Before making decisions**: Check if this was decided before.
 - **When debugging**: Check if this problem was encountered previously.
-- **When unsure about conventions**: Check for stored patterns.
 
 ### When to `remember`
 
+- **When the user says "remember this"**: Store it with a category.
 - **After completing a task**: Store key decisions and patterns.
   Use `category` to classify: `"decision"`, `"pattern"`, `"context"`.
 - **When the user teaches you something**: Use `category: "preference"`
@@ -350,16 +353,17 @@ Add a `## Memory (MemoryMesh)` section to your project's `AGENTS.md`:
 ```markdown
 ## Memory (MemoryMesh)
 
-MemoryMesh is configured as an MCP tool. Use it proactively for persistent
-memory across sessions.
+MemoryMesh adds persistent, structured memory on top of your existing system.
+It enhances your default memory with semantic search, categories, and
+cross-tool sync.
 
-- At the start of every task, call `session_start` to load user profile,
-  guardrails, and project context.
+- At the start of every task, call `recall` with a summary to load prior
+  context. If `session_start` is available, call it for full user profile.
 - Call `recall` before making decisions to check for prior context.
 - After completing work, call `remember` with a `category` to store key
   decisions (`"decision"`), patterns (`"pattern"`), or context (`"context"`).
-- Use `category: "preference"` or `category: "guardrail"` for user-level
-  facts -- these auto-route to global scope.
+- When the user says "remember this", store it with `category: "preference"`
+  or `category: "guardrail"` for user-level facts.
 ```
 
 ### Google Gemini CLI
@@ -369,24 +373,25 @@ Add a `## Memory (MemoryMesh)` section to your project's `GEMINI.md`:
 ```markdown
 ## Memory (MemoryMesh)
 
-MemoryMesh is configured as an MCP tool. Use it proactively for persistent
-memory across sessions.
+MemoryMesh adds persistent, structured memory on top of your existing system.
+It enhances your default memory with semantic search, categories, and
+cross-tool sync.
 
-- At the start of every task, call `session_start` to load user profile,
-  guardrails, and project context.
+- At the start of every task, call `recall` with a summary to load prior
+  context. If `session_start` is available, call it for full user profile.
 - Call `recall` before making decisions to check for prior context.
 - After completing work, call `remember` with a `category` to store key
   decisions (`"decision"`), patterns (`"pattern"`), or context (`"context"`).
-- Use `category: "preference"` or `category: "guardrail"` for user-level
-  facts -- these auto-route to global scope.
+- When the user says "remember this", store it with `category: "preference"`
+  or `category: "guardrail"` for user-level facts.
 ```
 
 ### Generic / Other MCP-Compatible Tools
 
 For any tool that supports MCP:
 
-1. Add the MCP server config (see [MCP Server setup](#claude-code) above).
-2. Add instructions to the tool's system prompt or configuration file telling it to call `recall` at the start of conversations and `remember` after completing work.
+1. Add the MCP server config (see [Setup by Tool](#setup-by-tool) above).
+2. Add instructions to the tool's system prompt telling it to call `recall` at the start of conversations and `remember` after completing work. MemoryMesh works alongside existing memory -- no need to disable anything.
 
 ---
 
