@@ -3,6 +3,7 @@
 Tests that MemoryMesh handles malicious or unusual inputs correctly
 without corrupting the memory store or recall results.
 """
+
 from __future__ import annotations
 
 
@@ -49,7 +50,7 @@ class TestPromptInjection:
         results = eval_mesh.recall("'; DROP TABLE memories; --", k=5)
         assert isinstance(results, list)
 
-        results = eval_mesh.recall("\" OR 1=1 --", k=5)
+        results = eval_mesh.recall('" OR 1=1 --', k=5)
         assert isinstance(results, list)
 
 

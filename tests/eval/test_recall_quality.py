@@ -7,6 +7,7 @@ deterministic, reproducible tests.
 Note: keyword-only mode uses LIKE substring matching.  Queries must
 contain a substring that actually appears in the stored text.
 """
+
 from __future__ import annotations
 
 import pytest

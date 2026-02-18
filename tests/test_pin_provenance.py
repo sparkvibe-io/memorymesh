@@ -203,6 +203,7 @@ class TestProvenanceMetadata:
             assert mem is not None
             assert mem.metadata.get("tool") == "claude-code"
         finally:
+            server._mesh.close()
             for k, v in old_env.items():
                 if v is None:
                     os.environ.pop(k, None)
@@ -231,6 +232,7 @@ class TestProvenanceMetadata:
             )
             assert server._client_name == "cursor"
         finally:
+            server._mesh.close()
             for k, v in old_env.items():
                 if v is None:
                     os.environ.pop(k, None)

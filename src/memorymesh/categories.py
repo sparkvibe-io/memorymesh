@@ -200,7 +200,9 @@ _USER_SUBJECT_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\buser never\b", re.IGNORECASE),
     re.compile(r"\buser[''\u2019]s\b", re.IGNORECASE),
     # Possessive name patterns: "<Name>'s patterns", "<Name>'s workflow"
-    re.compile(r"\b[A-Z][a-z]+[''\u2019]s (?:pattern|workflow|habit|style|preference)", re.IGNORECASE),
+    re.compile(
+        r"\b[A-Z][a-z]+[''\u2019]s (?:pattern|workflow|habit|style|preference)", re.IGNORECASE
+    ),
     # Cross-project / universal phrasing
     re.compile(r"\bacross all projects?\b", re.IGNORECASE),
     re.compile(r"\bin every project\b", re.IGNORECASE),

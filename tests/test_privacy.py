@@ -79,11 +79,7 @@ class TestCheckForSecrets:
         assert result == []
 
     def test_multiple_secret_types_detected(self) -> None:
-        text = (
-            "sk-abcdefghijklmnopqrstuvwxyz "
-            "password: secret123 "
-            "AKIAIOSFODNN7EXAMPLE"
-        )
+        text = "sk-abcdefghijklmnopqrstuvwxyz password: secret123 AKIAIOSFODNN7EXAMPLE"
         result = check_for_secrets(text)
         assert len(result) >= 3
         assert "API key" in result

@@ -1,4 +1,5 @@
 """Shared fixtures for MemoryMesh evaluation tests."""
+
 from __future__ import annotations
 
 import pytest
@@ -40,9 +41,7 @@ def populated_mesh(eval_mesh):
     eval_mesh.remember(
         "Embedding providers are pluggable via factory pattern", scope="project", importance=0.85
     )
-    eval_mesh.remember(
-        "MCP server uses JSON-RPC over stdio", scope="project", importance=0.8
-    )
+    eval_mesh.remember("MCP server uses JSON-RPC over stdio", scope="project", importance=0.8)
     eval_mesh.remember(
         "All state lives in class instances, no global mutable state",
         scope="project",
@@ -71,16 +70,12 @@ def populated_mesh(eval_mesh):
     )
 
     # Mixed importance
-    eval_mesh.remember(
-        "Server runs on port 8765 by default", scope="project", importance=0.4
-    )
+    eval_mesh.remember("Server runs on port 8765 by default", scope="project", importance=0.4)
     eval_mesh.remember(
         "Maximum memory text length is 100K characters", scope="project", importance=0.3
     )
     eval_mesh.remember("WAL journal mode used for SQLite", scope="project", importance=0.5)
-    eval_mesh.remember(
-        "Cosine similarity computed in pure Python", scope="project", importance=0.4
-    )
+    eval_mesh.remember("Cosine similarity computed in pure Python", scope="project", importance=0.4)
     eval_mesh.remember(
         "Embeddings stored as binary blobs for space efficiency", scope="project", importance=0.6
     )
