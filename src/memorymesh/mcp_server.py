@@ -307,6 +307,63 @@ TOOLS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "name": "update_memory",
+        "description": (
+            "Update an existing memory's text, importance, scope, or metadata "
+            "in place. Only the provided fields are changed; omitted fields "
+            "keep their current values."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "memory_id": {
+                    "type": "string",
+                    "description": "The ID of the memory to update.",
+                },
+                "text": {
+                    "type": "string",
+                    "description": "New text content (replaces existing).",
+                },
+                "importance": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "description": "New importance score.",
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"],
+                    "description": "Move memory to this scope.",
+                },
+                "metadata": {
+                    "type": "object",
+                    "description": "New metadata (replaces existing).",
+                    "additionalProperties": True,
+                },
+            },
+            "required": ["memory_id"],
+        },
+    },
+    {
+        "name": "review_memories",
+        "description": (
+            "Audit memories for quality issues (scope mismatches, verbosity, "
+            "staleness, duplicates). Returns issues with suggestions."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"],
+                    "description": (
+                        "Limit review to a specific scope. Omit to review all memories."
+                    ),
+                },
+            },
+        },
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -613,6 +670,8 @@ class MemoryMeshMCPServer:
             "forget_all": self._tool_forget_all,
             "memory_stats": self._tool_memory_stats,
             "session_start": self._tool_session_start,
+            "update_memory": self._tool_update_memory,
+            "review_memories": self._tool_review_memories,
         }
 
         handler = tool_handlers.get(tool_name)  # type: ignore[arg-type]
@@ -945,6 +1004,112 @@ class MemoryMeshMCPServer:
 
         context = self._mesh.session_start(project_context=project_context)
         return self._tool_success(json.dumps(context, indent=2))
+
+    def _tool_update_memory(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Execute the ``update_memory`` tool.
+
+        Args:
+            args: Tool arguments. Must include ``memory_id``. May include
+                ``text``, ``importance``, ``scope``, and ``metadata``.
+
+        Returns:
+            MCP content response with the updated memory info, or an
+            error if the memory was not found.
+        """
+        memory_id = args.get("memory_id")
+        if not memory_id or not isinstance(memory_id, str):
+            return self._tool_error("'memory_id' is required and must be a non-empty string.")
+
+        text = args.get("text")
+        if text is not None:
+            if not isinstance(text, str) or not text:
+                return self._tool_error("'text' must be a non-empty string.")
+            if len(text) > MAX_TEXT_LENGTH:
+                return self._tool_error(
+                    f"'text' exceeds maximum length of {MAX_TEXT_LENGTH} characters."
+                )
+
+        importance = args.get("importance")
+        if importance is not None:
+            if not isinstance(importance, (int, float)):
+                return self._tool_error("'importance' must be a number.")
+            importance = max(0.0, min(1.0, float(importance)))
+
+        scope = args.get("scope")
+        if scope is not None and scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
+            return self._tool_error("'scope' must be 'project' or 'global'.")
+
+        metadata = args.get("metadata")
+        if metadata is not None:
+            if not isinstance(metadata, dict):
+                return self._tool_error("'metadata' must be an object.")
+            meta_serialized = json.dumps(metadata, ensure_ascii=False)
+            if len(meta_serialized) > MAX_METADATA_SIZE:
+                return self._tool_error(
+                    f"'metadata' exceeds maximum size of {MAX_METADATA_SIZE} bytes."
+                )
+
+        try:
+            updated = self._mesh.update(
+                memory_id=memory_id,
+                text=text,
+                importance=importance,
+                metadata=metadata,
+                scope=scope,
+            )
+        except RuntimeError as exc:
+            return self._tool_error(str(exc))
+
+        if updated is None:
+            return self._tool_error(f"Memory {memory_id} not found.")
+
+        result = {
+            "memory_id": updated.id,
+            "text": updated.text[:80] + ("..." if len(updated.text) > 80 else ""),
+            "importance": round(updated.importance, 4),
+            "scope": updated.scope,
+            "message": f"Memory {memory_id} updated successfully.",
+        }
+        return self._tool_success(json.dumps(result, indent=2))
+
+    def _tool_review_memories(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Execute the ``review_memories`` tool.
+
+        Args:
+            args: Tool arguments. May include ``scope``.
+
+        Returns:
+            MCP content response with review issues and quality score.
+        """
+        from .review import review_memories
+
+        scope = args.get("scope")
+        if scope is not None and scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
+            return self._tool_error("'scope' must be 'project', 'global', or omitted.")
+
+        review_result = review_memories(self._mesh, scope=scope)
+
+        issues_list = []
+        for issue in review_result.issues:
+            issues_list.append(
+                {
+                    "memory_id": issue.memory_id,
+                    "issue_type": issue.issue_type,
+                    "severity": issue.severity,
+                    "description": issue.description,
+                    "suggestion": issue.suggestion,
+                    "auto_fixable": issue.auto_fixable,
+                }
+            )
+
+        result: dict[str, Any] = {
+            "quality_score": review_result.quality_score,
+            "total_reviewed": review_result.total_reviewed,
+            "scanned_scope": review_result.scanned_scope,
+            "issue_count": len(issues_list),
+            "issues": issues_list,
+        }
+        return self._tool_success(json.dumps(result, indent=2))
 
     # ------------------------------------------------------------------
     # Response helpers

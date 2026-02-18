@@ -33,6 +33,9 @@ _DEFAULT_GLOBAL_DIR = _DEFAULT_DIR
 _DEFAULT_GLOBAL_DB = os.path.join(_DEFAULT_GLOBAL_DIR, "global.db")
 _LEGACY_DB = _DEFAULT_DB
 
+# Sentinel object to distinguish "not provided" from ``None`` in update calls.
+_UNSET: Any = object()
+
 
 def detect_project_root(roots: list[dict[str, Any]] | None = None) -> str | None:
     """Detect the project root directory.
@@ -541,6 +544,71 @@ class MemoryStore:
                 """,
                 (now, memory_id),
             )
+
+    def update_fields(
+        self,
+        memory_id: str,
+        text: str | None = None,
+        importance: float | None = None,
+        decay_rate: float | None = None,
+        metadata: dict[str, Any] | None = None,
+        embedding: list[float] | None = _UNSET,  # type: ignore[assignment]
+    ) -> bool:
+        """Update specific fields of an existing memory.
+
+        Only the fields that are explicitly provided (non-``None``) are
+        changed.  The ``updated_at`` timestamp is always refreshed.
+
+        The *embedding* parameter uses a sentinel default so that callers
+        can distinguish between "not provided" (keep existing) and
+        "explicitly set to ``None``" (clear the embedding).
+
+        Args:
+            memory_id: The unique identifier of the memory to update.
+            text: New text content, or ``None`` to keep existing.
+            importance: New importance score, or ``None`` to keep existing.
+            decay_rate: New decay rate, or ``None`` to keep existing.
+            metadata: New metadata dict, or ``None`` to keep existing.
+            embedding: New embedding vector, ``None`` to clear, or the
+                sentinel ``_UNSET`` (default) to keep existing.
+
+        Returns:
+            ``True`` if the row was updated, ``False`` if the memory ID
+            was not found.
+        """
+        set_clauses: list[str] = []
+        params: list[Any] = []
+
+        if text is not None:
+            set_clauses.append("text = ?")
+            params.append(text)
+
+        if importance is not None:
+            set_clauses.append("importance = ?")
+            params.append(importance)
+
+        if decay_rate is not None:
+            set_clauses.append("decay_rate = ?")
+            params.append(decay_rate)
+
+        if metadata is not None:
+            set_clauses.append("metadata_json = ?")
+            params.append(json.dumps(metadata, ensure_ascii=False))
+
+        if embedding is not _UNSET:
+            set_clauses.append("embedding_blob = ?")
+            params.append(_pack_embedding(embedding))
+
+        # Always refresh updated_at.
+        set_clauses.append("updated_at = ?")
+        params.append(datetime.now(timezone.utc).isoformat())
+
+        params.append(memory_id)
+
+        sql = f"UPDATE memories SET {', '.join(set_clauses)} WHERE id = ?"
+        with self._cursor() as cur:
+            cur.execute(sql, params)
+            return cur.rowcount > 0
 
     def close(self) -> None:
         """Close the current thread's database connection, if open."""

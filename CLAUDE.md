@@ -111,6 +111,17 @@ If `session_start` is available, call it to load the full user profile, guardrai
 - Use `scope: "global"` for user preferences, identity, and cross-project facts.
 - Categories auto-route scope -- when using a category, you don't need to set scope manually.
 
+### Memory Hygiene
+
+Periodically (or when the user asks), review memory quality:
+
+1. Call `review_memories` to get an audit of issues
+2. For each high-severity issue, fix it:
+   - Scope mismatch: `update_memory(id, scope="project")` to move it to the correct scope
+   - Too verbose: `update_memory(id, text="<concise version>")` to distill
+   - Duplicate: `forget(duplicate_id)` to remove redundancy
+3. Call `review_memories` again to confirm quality score improved
+
 ## Code Conventions
 
 - **Type hints** are required on all public functions and methods.

@@ -61,6 +61,7 @@ from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory, validate_scope
 from .privacy import check_for_secrets, redact_secrets
 from .relevance import RelevanceEngine, RelevanceWeights
 from .report import generate_report
+from .review import ReviewIssue, ReviewResult, review_memories
 from .store import MemoryStore, detect_project_root
 from .sync import sync_from_memory_md, sync_to_memory_md
 
@@ -125,6 +126,10 @@ __all__ = [
     # Privacy
     "check_for_secrets",
     "redact_secrets",
+    # Review
+    "ReviewIssue",
+    "ReviewResult",
+    "review_memories",
     # Relevance
     "RelevanceEngine",
     "RelevanceWeights",

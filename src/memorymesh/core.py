@@ -576,6 +576,104 @@ class MemoryMesh:
             mem.scope = GLOBAL_SCOPE
         return mem
 
+    def update(
+        self,
+        memory_id: str,
+        text: str | None = None,
+        importance: float | None = None,
+        decay_rate: float | None = None,
+        metadata: dict[str, Any] | None = None,
+        scope: str | None = None,
+    ) -> Memory | None:
+        """Update an existing memory in place.
+
+        Any provided parameter replaces the corresponding field.  If
+        *text* is changed, the embedding is recomputed automatically.
+
+        When *scope* is provided and differs from the memory's current
+        scope, the memory is **migrated**: deleted from the old store
+        and re-created in the new store with the updated fields.
+
+        Args:
+            memory_id: The unique identifier of the memory to update.
+            text: New text content, or ``None`` to keep existing.
+            importance: New importance score, or ``None`` to keep existing.
+            decay_rate: New decay rate, or ``None`` to keep existing.
+            metadata: New metadata dict, or ``None`` to keep existing.
+            scope: Target scope (``"project"`` or ``"global"``).
+                ``None`` keeps the memory in its current store.
+
+        Returns:
+            The updated :class:`Memory` if found, or ``None`` if
+            *memory_id* does not exist.
+
+        Raises:
+            RuntimeError: If the target scope is ``"project"`` but no
+                project database is configured.
+        """
+        mem = self.get(memory_id)
+        if mem is None:
+            return None
+
+        current_scope = mem.scope
+
+        # Determine effective new values.
+        new_text = text if text is not None else mem.text
+        new_importance = importance if importance is not None else mem.importance
+        new_decay_rate = decay_rate if decay_rate is not None else mem.decay_rate
+        new_metadata = metadata if metadata is not None else mem.metadata
+
+        if scope is not None and scope != current_scope:
+            # -- Scope migration: delete from old, create in new store ---
+            validate_scope(scope)
+            old_store = self._store_for_scope(current_scope)
+            old_store.delete(memory_id)
+
+            # Recompute embedding for the (possibly new) text.
+            emb = self._safe_embed(new_text)
+
+            new_mem = Memory(
+                id=memory_id,
+                text=new_text,
+                metadata=new_metadata,
+                embedding=emb if emb else None,
+                created_at=mem.created_at,
+                importance=new_importance,
+                decay_rate=new_decay_rate,
+                access_count=mem.access_count,
+                session_id=mem.session_id,
+                scope=scope,
+            )
+            target_store = self._store_for_scope(scope)
+            target_store.save(new_mem)
+            logger.debug(
+                "Migrated memory %s from %s to %s",
+                memory_id,
+                current_scope,
+                scope,
+            )
+            return self.get(memory_id)
+
+        # -- In-place update ------------------------------------------
+        from .store import _UNSET
+
+        new_embedding: Any = _UNSET
+        if text is not None and text != mem.text:
+            emb = self._safe_embed(text)
+            new_embedding = emb if emb else None
+
+        store = self._store_for_scope(current_scope)
+        store.update_fields(
+            memory_id=memory_id,
+            text=text,
+            importance=importance,
+            decay_rate=decay_rate,
+            metadata=metadata,
+            embedding=new_embedding,
+        )
+        logger.debug("Updated memory %s in %s store", memory_id, current_scope)
+        return self.get(memory_id)
+
     def get_time_range(
         self,
         scope: str | None = None,
