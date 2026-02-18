@@ -30,6 +30,7 @@ from .categories import (
     PROJECT_CATEGORIES,
     VALID_CATEGORIES,
     auto_categorize,
+    infer_scope,
     scope_for_category,
     validate_category,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "GLOBAL_CATEGORIES",
     "PROJECT_CATEGORIES",
     "auto_categorize",
+    "infer_scope",
     "scope_for_category",
     "validate_category",
     # Compaction

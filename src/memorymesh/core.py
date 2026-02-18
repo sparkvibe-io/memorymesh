@@ -14,6 +14,7 @@ from typing import Any
 from .auto_importance import score_importance
 from .categories import CATEGORY_SCOPE_MAP, GLOBAL_CATEGORIES, PROJECT_CATEGORIES, validate_category
 from .categories import auto_categorize as _auto_categorize
+from .categories import infer_scope as _infer_scope
 from .compaction import CompactionResult
 from .contradiction import ConflictMode, find_contradictions
 from .embeddings import EmbeddingProvider, NoopEmbedding, create_embedding_provider
@@ -159,7 +160,7 @@ class MemoryMesh:
         metadata: dict[str, Any] | None = None,
         importance: float = 0.5,
         decay_rate: float = 0.01,
-        scope: str = PROJECT_SCOPE,
+        scope: str | None = None,
         auto_importance: bool = False,
         session_id: str | None = None,
         category: str | None = None,
@@ -177,9 +178,13 @@ class MemoryMesh:
                 make the memory more prominent during recall.
             decay_rate: Rate at which importance decays over time.
                 ``0`` means the memory never decays.
-            scope: ``"project"`` (default) or ``"global"``.  When
-                *category* is provided, the scope is automatically
-                determined by the category and this parameter is ignored.
+            scope: ``"project"``, ``"global"``, or ``None`` (default).
+                When ``None``, the scope is inferred automatically --
+                first from *category* routing, then from subject-based
+                heuristics (user-focused text → global, project-focused
+                → project).  Falls back to ``"project"`` if no signal
+                is detected.  When explicitly set, the value is
+                respected unless *category* overrides it.
             auto_importance: If ``True``, override *importance* with a
                 heuristic score computed from the text content.
             session_id: Optional session/episode identifier for grouping
@@ -212,6 +217,7 @@ class MemoryMesh:
             ValueError: If *category* is not a recognised category name.
         """
         meta = dict(metadata) if metadata else {}
+        caller_set_scope = scope is not None
 
         # -- Category handling -------------------------------------------------
         if auto_categorize and category is None:
@@ -222,6 +228,27 @@ class MemoryMesh:
             validate_category(category)
             scope = CATEGORY_SCOPE_MAP[category]
             meta["category"] = category
+
+        # -- Subject-based scope inference ------------------------------------
+        # If the caller didn't explicitly set scope, refine via text analysis.
+        if not caller_set_scope:
+            project_name = None
+            if self._project_store:
+                # path is <root>/.memorymesh/memories.db → dirname twice → root
+                project_name = os.path.basename(
+                    os.path.dirname(os.path.dirname(self._project_store._path))
+                )
+            inferred = _infer_scope(
+                text,
+                category_scope=scope,
+                project_name=project_name,
+            )
+            if inferred is not None:
+                scope = inferred
+
+        # Default to project scope if still None.
+        if scope is None:
+            scope = PROJECT_SCOPE
 
         validate_scope(scope)
         store = self._store_for_scope(scope)
