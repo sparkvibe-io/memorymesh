@@ -203,7 +203,7 @@ response = openai_client.chat.completions.create(
 - Memory compaction (detect and merge similar/redundant memories)
 - Comprehensive benchmarks (`make bench` -- throughput, latency, concurrency, disk usage)
 
-### v2.0 -- Personality & Learning Engine (Current)
+### v2.0 -- Personality & Learning Engine
 - Memory categories with automatic scope routing (`category="preference"` -> global)
 - Auto-categorization from text heuristics (`auto_categorize=True`)
 - `session_start()` method for structured context at the beginning of every AI session
@@ -217,6 +217,8 @@ response = openai_client.chat.completions.create(
 - Advanced retrieval filters (category, importance, time range, metadata)
 - Web dashboard for browsing and searching memories (`memorymesh ui`)
 - Evaluation suite (recall quality + adversarial robustness tests)
+- Memory hygiene: `update()` API for in-place edits and scope migration, `review` system for auditing memory quality
+- Subject-based scope inference: automatically routes memories to project or global scope based on text content
 
 ### v4.0 -- Advanced
 - Graph-based memory relationships

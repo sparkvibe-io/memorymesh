@@ -36,6 +36,18 @@ Full Python API for the `MemoryMesh` class.
 |---|---|
 | `compact(scope, similarity_threshold, dry_run)` | Detect and merge similar memories |
 
+## Update Methods
+
+| Method | Description |
+|---|---|
+| `update(memory_id, text, importance, decay_rate, metadata, scope)` | Update an existing memory in-place. Supports scope migration. |
+
+## Review Methods
+
+| Method | Description |
+|---|---|
+| `review_memories(mesh, scope, detectors, project_name)` | Audit memories for quality issues (returns ReviewResult) |
+
 ## Constructor
 
 ```python
@@ -57,7 +69,7 @@ memory.remember(
     metadata={"source": "chat"},     # Optional: key-value metadata
     importance=0.5,                  # Optional: importance score 0.0-1.0
     decay_rate=0.01,                 # Optional: how fast importance fades
-    scope="project",                 # Optional: "project" or "global"
+    scope=None,                      # Optional: "project", "global", or None (auto-infer)
     auto_importance=False,           # Optional: auto-score importance from text
     session_id=None,                 # Optional: group into a conversation session
     category=None,                   # Optional: "preference", "guardrail", "mistake", etc.
@@ -78,6 +90,8 @@ When `redact=True`, detected secrets (API keys, tokens, passwords) are replaced 
 
 The `on_conflict` parameter controls contradiction handling: `"keep_both"` (default) stores both and flags the contradiction, `"update"` replaces the most similar existing memory, `"skip"` discards the new memory if a contradiction is found (returns empty string).
 
+When `scope` is `None` (default), MemoryMesh automatically infers the scope from the text content. Text about the user (preferences, habits, workflow) routes to global; text about the project (file paths, versions, implementations) routes to project. Set `scope` explicitly to override.
+
 **Valid categories:**
 
 | Category | Scope | Description |
@@ -91,6 +105,21 @@ The `on_conflict` parameter controls contradiction handling: `"keep_both"` (defa
 | `pattern` | project | Code patterns and conventions |
 | `context` | project | Project-specific facts |
 | `session_summary` | project | Auto-generated session summaries |
+
+## update()
+
+```python
+memory.update(
+    memory_id="abc123",              # Required: ID of memory to update
+    text="Updated text",             # Optional: new text (re-embeds if changed)
+    importance=0.8,                  # Optional: new importance score
+    decay_rate=0.0,                  # Optional: new decay rate
+    metadata={"category": "decision"},  # Optional: new metadata
+    scope="global",                  # Optional: migrate to different scope
+)
+```
+
+When `scope` is provided, the memory is moved from its current store to the new scope's store (cross-scope migration). Only the fields you pass are changed -- omitted fields retain their current values.
 
 ## recall()
 

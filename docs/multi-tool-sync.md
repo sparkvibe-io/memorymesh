@@ -29,7 +29,7 @@ memorymesh formats
 - Importance scores round-trip via invisible HTML comments, so re-importing preserves priority.
 - Use `--to auto` to let MemoryMesh detect the correct file path for each tool.
 
-## Category-Aware Sync (v2.0)
+## Category-Aware Sync
 
 When memories have categories (set via `category` parameter or `auto_categorize=True`), the sync output is automatically organized into structured sections:
 

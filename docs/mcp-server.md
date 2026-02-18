@@ -282,6 +282,8 @@ Once connected, your AI assistant gains these tools:
 - **`forget_all`** -- Delete all memories in a scope (defaults to project)
 - **`memory_stats`** -- View memory count and timestamps (supports `scope`)
 - **`session_start`** -- Retrieve structured context for the start of a new session. Returns user profile, guardrails, common mistakes, and project context. Call this at the beginning of every conversation.
+- **`update_memory`** -- Update an existing memory's text, importance, metadata, or scope. Supports cross-scope migration.
+- **`review_memories`** -- Audit memories for quality issues. Returns issues list with severity ratings and an overall quality score (0-100).
 
 No API keys are needed for the default setup. The MCP server uses keyword matching out of the box. Add an embedding provider for semantic search.
 

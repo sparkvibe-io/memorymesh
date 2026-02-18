@@ -261,7 +261,7 @@ The output is clamped to `[0.0, 1.0]` with a baseline of `0.5`.
 
 ## Memory Categories
 
-MemoryMesh v2.0 introduces automatic memory categorization. When you set a category, the scope is automatically routed:
+MemoryMesh supports automatic memory categorization. When you set a category, the scope is automatically routed:
 
 ```python
 # Category determines scope automatically
@@ -287,6 +287,23 @@ memory.remember("I always use black for formatting", auto_categorize=True)
 | `session_summary` | project | Auto-generated session summaries |
 
 When `auto_categorize=True`, MemoryMesh also enables `auto_importance=True` automatically.
+
+## Scope Inference
+
+When `scope` is not explicitly set in `remember()`, MemoryMesh automatically infers the correct scope from the text content:
+
+- **User-focused text** -> global scope: "User prefers dark mode", "Krishna's workflow: review then merge", "Coding style: functional over OOP"
+- **Project-focused text** -> project scope: file paths (`src/`, `*.py`), config files (`pyproject.toml`), implementation state, version numbers, commit hashes
+
+The inference uses a scoring system -- when both user and project signals are present, the stronger signal wins. Product/project names detected from the project directory add extra weight toward project scope.
+
+Category routing still applies first. Inference refines it when the subject disagrees -- for example, a memory categorized as "pattern" (normally project) that says "Krishna's patterns: tests CLI hands-on" is about the *user*, so it routes to global.
+
+To override inference, set `scope` explicitly:
+
+```python
+memory.remember("User prefers dark mode", scope="project")  # forced project despite user-focused text
+```
 
 ## Session Start
 

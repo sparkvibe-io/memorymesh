@@ -14,6 +14,7 @@ The `memorymesh` CLI lets you inspect, manage, and sync your memory stores from 
 | `memorymesh sync` | Sync memories to/from AI tool markdown files |
 | `memorymesh formats` | List known format adapters and install status |
 | `memorymesh report` | Generate a memory analytics report |
+| `memorymesh review` | Audit memories for quality issues |
 
 Most commands accept `--scope project|global|all` to filter by store. Run `memorymesh <command> --help` for full options.
 
@@ -33,6 +34,35 @@ Options:
 | `--no-open` | | Do not automatically open the browser |
 
 The dashboard provides a searchable, filterable view of all memories across both project and global stores. It runs entirely locally -- no data leaves your machine.
+
+## `memorymesh review`
+
+Audit memories for quality issues and get an overall health score.
+
+```bash
+memorymesh review [--scope project|global|all] [--fix] [--verbose]
+```
+
+Options:
+
+| Option | Default | Description |
+|---|---|---|
+| `--scope SCOPE` | `all` | Which scope to audit |
+| `--fix` | | Auto-fix what it can (add categories to uncategorized memories) |
+| `--verbose` | | Show each issue with memory preview and suggestion |
+
+The review system detects 6 types of issues:
+
+| Issue | Severity | Description |
+|---|---|---|
+| `scope_mismatch` | High | Memory in wrong scope (e.g. product name in global) |
+| `too_verbose` | Medium | Text exceeds length limits (200 chars global, 500 project) |
+| `near_duplicate` | Medium | Similar to another memory (>70% text similarity) |
+| `uncategorized` | Low | Missing category metadata |
+| `stale` | Low | Not accessed in 30+ days with low importance |
+| `low_quality` | Low | Low auto-importance score (<0.4) |
+
+Quality score formula: `100 - (high * 10 + medium * 5 + low * 2)`, clamped to 0-100.
 
 ## Compaction
 
