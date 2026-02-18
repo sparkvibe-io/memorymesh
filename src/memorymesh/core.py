@@ -6,6 +6,7 @@ three-method API: :meth:`remember`, :meth:`recall`, :meth:`forget`.
 
 from __future__ import annotations
 
+import builtins
 import logging
 import os
 from typing import Any
@@ -397,7 +398,7 @@ class MemoryMesh:
         limit: int = 10,
         offset: int = 0,
         scope: str | None = None,
-    ) -> list[Memory]:
+    ) -> builtins.list[Memory]:
         """List memories with pagination.
 
         Args:
@@ -440,7 +441,7 @@ class MemoryMesh:
         all_mems.sort(key=lambda m: m.updated_at, reverse=True)
         return all_mems[offset : offset + limit]
 
-    def search(self, text: str, k: int = 5) -> list[Memory]:
+    def search(self, text: str, k: int = 5) -> builtins.list[Memory]:
         """Search memories by text similarity.
 
         This is a convenience alias for :meth:`recall`.
@@ -514,7 +515,7 @@ class MemoryMesh:
         self,
         session_id: str,
         scope: str | None = None,
-    ) -> list[Memory]:
+    ) -> builtins.list[Memory]:
         """Retrieve all memories belonging to a specific session.
 
         Args:
@@ -546,7 +547,7 @@ class MemoryMesh:
         self,
         scope: str | None = None,
         limit: int = 50,
-    ) -> list[dict[str, Any]]:
+    ) -> builtins.list[dict[str, Any]]:
         """List distinct sessions with summary statistics.
 
         Args:
@@ -797,9 +798,9 @@ class MemoryMesh:
     def _get_candidates(
         self,
         query: str,
-        query_embedding: list[float],
+        query_embedding: builtins.list[float],
         store: MemoryStore,
-    ) -> list[Memory]:
+    ) -> builtins.list[Memory]:
         """Gather candidate memories from a single store.
 
         Combines vector search (when embeddings are available) with
@@ -853,7 +854,7 @@ class MemoryMesh:
 
         return create_embedding_provider(name, **provider_kwargs)
 
-    def _safe_embed(self, text: str) -> list[float]:
+    def _safe_embed(self, text: str) -> builtins.list[float]:
         """Embed text, returning an empty list on failure.
 
         Catches and logs exceptions from the embedding provider so that

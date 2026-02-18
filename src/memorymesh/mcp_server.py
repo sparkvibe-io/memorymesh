@@ -584,7 +584,7 @@ class MemoryMeshMCPServer:
             return self._tool_error(f"Unknown tool: {tool_name}")
 
         try:
-            return handler(arguments)
+            return handler(arguments)  # type: ignore[no-any-return]
         except Exception:
             logger.exception("Tool %s raised an exception", tool_name)
             return self._tool_error(f"Tool '{tool_name}' encountered an error.")

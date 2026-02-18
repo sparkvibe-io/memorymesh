@@ -174,7 +174,7 @@ class LocalEmbedding(EmbeddingProvider):
         if self._model is None:
             self._load_model()
         vector = self._model.encode(text, convert_to_numpy=True)
-        return vector.tolist()
+        return vector.tolist()  # type: ignore[no-any-return]
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Compute embeddings for a batch of texts.
@@ -265,7 +265,7 @@ class OllamaEmbedding(EmbeddingProvider):
         if not embeddings:
             keys = ", ".join(str(k) for k in data) if isinstance(data, dict) else "N/A"
             raise RuntimeError(f"Ollama returned an unexpected response (keys: {keys})")
-        return embeddings[0]
+        return embeddings[0]  # type: ignore[no-any-return]
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Compute embeddings for multiple texts via Ollama.
@@ -307,7 +307,7 @@ class OllamaEmbedding(EmbeddingProvider):
         if not embeddings:
             keys = ", ".join(str(k) for k in data) if isinstance(data, dict) else "N/A"
             raise RuntimeError(f"Ollama returned an unexpected response (keys: {keys})")
-        return embeddings
+        return embeddings  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:
         return f"OllamaEmbedding(model={self._model!r}, base_url={self._base_url!r})"

@@ -460,7 +460,7 @@ class MemoryStore:
         """
         with self._cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM memories")
-            total = cur.fetchone()[0]
+            total: int = cur.fetchone()[0]
             cur.execute("DELETE FROM memories")
         return total
 
