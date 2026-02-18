@@ -198,15 +198,7 @@ def test_import_file_not_found(tmp_path, mesh):
 def test_import_skips_headers(tmp_path, mesh):
     """Import skips header lines (#), blockquotes (>), and empty lines."""
     md_file = tmp_path / "MEMORY.md"
-    md_file.write_text(
-        "# Header\n"
-        "\n"
-        "> Blockquote\n"
-        "\n"
-        "## Section\n"
-        "\n"
-        "- Actual memory\n"
-    )
+    md_file.write_text("# Header\n\n> Blockquote\n\n## Section\n\n- Actual memory\n")
     count = sync_from_memory_md(mesh, str(md_file), scope="project")
     assert count == 1
 
@@ -222,11 +214,17 @@ def test_sync_via_cli_to(tmp_path, populated_mesh, capsys):
 
     output = str(tmp_path / "export.md")
     populated_mesh.close()
-    rc = main([
-        "--project-path", str(tmp_path / "project.db"),
-        "--global-path", str(tmp_path / "global.db"),
-        "sync", "--to", output,
-    ])
+    rc = main(
+        [
+            "--project-path",
+            str(tmp_path / "project.db"),
+            "--global-path",
+            str(tmp_path / "global.db"),
+            "sync",
+            "--to",
+            output,
+        ]
+    )
     assert rc == 0
     assert os.path.isfile(output)
 
@@ -238,11 +236,17 @@ def test_sync_via_cli_from(tmp_path, capsys):
     md_file = tmp_path / "input.md"
     md_file.write_text("- CLI import test memory\n")
 
-    rc = main([
-        "--project-path", str(tmp_path / "project.db"),
-        "--global-path", str(tmp_path / "global.db"),
-        "sync", "--from", str(md_file),
-    ])
+    rc = main(
+        [
+            "--project-path",
+            str(tmp_path / "project.db"),
+            "--global-path",
+            str(tmp_path / "global.db"),
+            "sync",
+            "--from",
+            str(md_file),
+        ]
+    )
     assert rc == 0
     captured = capsys.readouterr()
     assert "Imported 1" in captured.out

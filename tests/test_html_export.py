@@ -189,7 +189,11 @@ def test_inline_js():
     html = generate_html([])
     assert "<script>" in html
     # No external script tags
-    assert "src=" not in html.split("<script>")[0].split("</script>")[0] if "<script>" in html else True
+    assert (
+        "src=" not in html.split("<script>")[0].split("</script>")[0]
+        if "<script>" in html
+        else True
+    )
 
 
 def test_search_box():

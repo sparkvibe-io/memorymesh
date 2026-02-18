@@ -166,9 +166,7 @@ class TestStructureSignal:
 
     def test_multiple_patterns(self):
         """Multiple code patterns result in a higher score."""
-        score = _structure_signal(
-            "import memorymesh; use `MemoryMesh` class with def remember("
-        )
+        score = _structure_signal("import memorymesh; use `MemoryMesh` class with def remember(")
         assert score >= 0.75
 
     def test_many_patterns(self):

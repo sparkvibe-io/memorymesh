@@ -59,8 +59,7 @@ def validate_category(category: str) -> None:
     """
     if category not in VALID_CATEGORIES:
         raise ValueError(
-            f"Invalid category {category!r}. "
-            f"Must be one of: {sorted(VALID_CATEGORIES)}"
+            f"Invalid category {category!r}. Must be one of: {sorted(VALID_CATEGORIES)}"
         )
 
 

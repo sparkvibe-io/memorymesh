@@ -162,7 +162,9 @@ def decrypt_field(ciphertext_b64: str, key: bytes) -> str:
     # Verify authentication tag BEFORE decrypting (encrypt-then-MAC).
     expected_tag = hmac.new(key, iv + ciphertext_bytes, hashlib.sha256).digest()
     if not hmac.compare_digest(tag, expected_tag):
-        raise ValueError("Authentication failed: ciphertext has been tampered with or key is wrong.")
+        raise ValueError(
+            "Authentication failed: ciphertext has been tampered with or key is wrong."
+        )
 
     # Decrypt via XOR with identical keystream.
     plaintext = bytearray()
@@ -293,9 +295,11 @@ class EncryptedMemoryStore:
         encrypted_mem = Memory(
             id=memory.id,
             text=encrypt_field(memory.text, self._key),
-            metadata={"_encrypted": encrypt_field(
-                json.dumps(memory.metadata, ensure_ascii=False), self._key
-            )},
+            metadata={
+                "_encrypted": encrypt_field(
+                    json.dumps(memory.metadata, ensure_ascii=False), self._key
+                )
+            },
             embedding=memory.embedding,
             created_at=memory.created_at,
             updated_at=memory.updated_at,

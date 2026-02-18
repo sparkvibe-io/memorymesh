@@ -664,46 +664,27 @@ class MemoryMesh:
                 by_cat[cat] = by_cat[cat][:max_per_category]
             return by_cat
 
-        global_by_cat = _collect(
-            self._global_store, GLOBAL_CATEGORIES, GLOBAL_SCOPE
-        )
-        project_by_cat = _collect(
-            self._project_store, PROJECT_CATEGORIES, PROJECT_SCOPE
-        )
+        global_by_cat = _collect(self._global_store, GLOBAL_CATEGORIES, GLOBAL_SCOPE)
+        project_by_cat = _collect(self._project_store, PROJECT_CATEGORIES, PROJECT_SCOPE)
 
         # -- Build result dict ---------------------------------------------
         result: dict[str, list[str]] = {
             "user_profile": [
                 m.text
                 for m in (
-                    global_by_cat.get("personality", [])
-                    + global_by_cat.get("preference", [])
+                    global_by_cat.get("personality", []) + global_by_cat.get("preference", [])
                 )
             ][:max_per_category],
-            "guardrails": [
-                m.text for m in global_by_cat.get("guardrail", [])
-            ],
-            "common_mistakes": [
-                m.text for m in global_by_cat.get("mistake", [])
-            ],
-            "common_questions": [
-                m.text for m in global_by_cat.get("question", [])
-            ],
-            "project_context": [
-                m.text for m in project_by_cat.get("context", [])
-            ],
-            "last_session": [
-                m.text for m in project_by_cat.get("session_summary", [])[:1]
-            ],
+            "guardrails": [m.text for m in global_by_cat.get("guardrail", [])],
+            "common_mistakes": [m.text for m in global_by_cat.get("mistake", [])],
+            "common_questions": [m.text for m in global_by_cat.get("question", [])],
+            "project_context": [m.text for m in project_by_cat.get("context", [])],
+            "last_session": [m.text for m in project_by_cat.get("session_summary", [])[:1]],
         }
 
         # Add project decisions and patterns to project_context.
-        result["project_context"].extend(
-            m.text for m in project_by_cat.get("decision", [])
-        )
-        result["project_context"].extend(
-            m.text for m in project_by_cat.get("pattern", [])
-        )
+        result["project_context"].extend(m.text for m in project_by_cat.get("decision", []))
+        result["project_context"].extend(m.text for m in project_by_cat.get("pattern", []))
         result["project_context"] = result["project_context"][:max_per_category]
 
         # If project_context query provided, supplement with recall results.
@@ -718,9 +699,7 @@ class MemoryMesh:
                 if mem.text not in existing_texts:
                     result["project_context"].append(mem.text)
                     existing_texts.add(mem.text)
-            result["project_context"] = result["project_context"][
-                : max_per_category * 2
-            ]
+            result["project_context"] = result["project_context"][: max_per_category * 2]
 
         logger.info(
             "session_start: profile=%d guardrails=%d mistakes=%d "

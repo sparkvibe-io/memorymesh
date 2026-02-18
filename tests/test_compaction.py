@@ -404,9 +404,7 @@ class TestCompactCLI:
 
         project_db = tmp_mesh.project_path
         global_db = tmp_mesh.global_path
-        exit_code = main(
-            ["--project-path", project_db, "--global-path", global_db, "compact"]
-        )
+        exit_code = main(["--project-path", project_db, "--global-path", global_db, "compact"])
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "No duplicates found" in captured.out
@@ -419,9 +417,7 @@ class TestCompactCLI:
 
         project_db = tmp_mesh.project_path
         global_db = tmp_mesh.global_path
-        exit_code = main(
-            ["--project-path", project_db, "--global-path", global_db, "compact"]
-        )
+        exit_code = main(["--project-path", project_db, "--global-path", global_db, "compact"])
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "Merged 1 pair" in captured.out

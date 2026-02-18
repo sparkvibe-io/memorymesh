@@ -94,11 +94,9 @@ def test_init_merges_existing_mcp_config(tmp_path, monkeypatch, capsys):
     claude_dir = fake_home / ".claude"
     claude_dir.mkdir(parents=True)
     config_path = claude_dir / "claude_code_config.json"
-    config_path.write_text(json.dumps({
-        "mcpServers": {
-            "other-server": {"command": "other-cmd", "args": []}
-        }
-    }))
+    config_path.write_text(
+        json.dumps({"mcpServers": {"other-server": {"command": "other-cmd", "args": []}}})
+    )
     monkeypatch.setattr(os.path, "expanduser", lambda p: p.replace("~", str(fake_home)))
 
     project_dir = tmp_path / "project"

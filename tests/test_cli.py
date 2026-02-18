@@ -43,8 +43,10 @@ def populated_mesh(mesh):
 def _cli(tmp_path, argv, mesh=None):
     """Helper to build CLI args with --project-path and --global-path."""
     base = [
-        "--project-path", str(tmp_path / "project.db"),
-        "--global-path", str(tmp_path / "global.db"),
+        "--project-path",
+        str(tmp_path / "project.db"),
+        "--global-path",
+        str(tmp_path / "global.db"),
     ]
     return base + argv
 

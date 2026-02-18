@@ -18,6 +18,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import unquote, urlparse
+from urllib.request import url2pathname
 
 from .memory import Memory
 
@@ -54,7 +55,9 @@ def detect_project_root(roots: list[dict[str, Any]] | None = None) -> str | None
         uri = roots[0].get("uri", "")
         if uri.startswith("file://"):
             parsed = urlparse(uri)
-            path = unquote(parsed.path)
+            # url2pathname handles platform-specific conversion
+            # (e.g. /C:/Users/... → C:\Users\... on Windows).
+            path = url2pathname(unquote(parsed.path))
             if os.path.isdir(path):
                 return os.path.realpath(path)
 

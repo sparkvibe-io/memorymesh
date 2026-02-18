@@ -85,8 +85,7 @@ PROMPTS: list[dict[str, Any]] = [
             {
                 "name": "context",
                 "description": (
-                    "Brief description of what you're working on "
-                    "(used to find relevant memories)."
+                    "Brief description of what you're working on (used to find relevant memories)."
                 ),
                 "required": False,
             }
@@ -139,8 +138,14 @@ TOOLS: list[dict[str, Any]] = [
                 "category": {
                     "type": "string",
                     "enum": [
-                        "preference", "guardrail", "mistake", "personality",
-                        "question", "decision", "pattern", "context",
+                        "preference",
+                        "guardrail",
+                        "mistake",
+                        "personality",
+                        "question",
+                        "decision",
+                        "pattern",
+                        "context",
                         "session_summary",
                     ],
                     "description": (
@@ -263,9 +268,7 @@ TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "project_context": {
                     "type": "string",
-                    "description": (
-                        "Brief description of what the user is working on."
-                    ),
+                    "description": ("Brief description of what the user is working on."),
                 },
             },
         },
@@ -644,8 +647,7 @@ class MemoryMeshMCPServer:
                 meta_parts = [f"{k}={v}" for k, v in mem.metadata.items()] if mem.metadata else []
                 meta_str = f"\n   (metadata: {', '.join(meta_parts)})" if meta_parts else ""
                 lines.append(
-                    f"{i}. [{mem.scope}, importance: {mem.importance:.2f}] "
-                    f"{mem.text}{meta_str}"
+                    f"{i}. [{mem.scope}, importance: {mem.importance:.2f}] {mem.text}{meta_str}"
                 )
             lines.append(
                 "\nUse these to inform your responses. "

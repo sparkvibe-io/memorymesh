@@ -23,13 +23,26 @@ class TestConstants:
 
     def test_all_categories_present(self) -> None:
         expected = {
-            "preference", "guardrail", "mistake", "personality",
-            "question", "decision", "pattern", "context", "session_summary",
+            "preference",
+            "guardrail",
+            "mistake",
+            "personality",
+            "question",
+            "decision",
+            "pattern",
+            "context",
+            "session_summary",
         }
         assert expected == VALID_CATEGORIES
 
     def test_global_categories(self) -> None:
-        assert {"preference", "guardrail", "mistake", "personality", "question"} == GLOBAL_CATEGORIES
+        assert {
+            "preference",
+            "guardrail",
+            "mistake",
+            "personality",
+            "question",
+        } == GLOBAL_CATEGORIES
 
     def test_project_categories(self) -> None:
         assert {"decision", "pattern", "context", "session_summary"} == PROJECT_CATEGORIES
@@ -104,10 +117,16 @@ class TestAutoCategorize:
 
     def test_pattern_detected(self) -> None:
         assert auto_categorize("Convention: use Google docstrings everywhere") == "pattern"
-        assert auto_categorize("The coding standard requires type hints on all public functions") == "pattern"
+        assert (
+            auto_categorize("The coding standard requires type hints on all public functions")
+            == "pattern"
+        )
 
     def test_session_summary_detected(self) -> None:
-        assert auto_categorize("Session summary: implemented auth module, 15 tests added") == "session_summary"
+        assert (
+            auto_categorize("Session summary: implemented auth module, 15 tests added")
+            == "session_summary"
+        )
 
     def test_context_fallback(self) -> None:
         assert auto_categorize("Main entry point is src/core.py") == "context"

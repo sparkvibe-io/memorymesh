@@ -97,14 +97,11 @@ class TestFreshInstall:
 
         # Verify table and indexes exist
         conn = sqlite3.connect(db_path)
-        cur = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='memories'"
-        )
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='memories'")
         assert cur.fetchone() is not None
 
         cur = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='index' "
-            "AND name LIKE 'idx_memories_%'"
+            "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_memories_%'"
         )
         indexes = {row[0] for row in cur.fetchall()}
         assert "idx_memories_importance" in indexes
@@ -239,7 +236,9 @@ class TestEdgeCases:
         assert v2 == LATEST_VERSION
         conn.close()
 
-    def test_future_version_warning(self, tmp_path: object, caplog: pytest.LogCaptureFixture) -> None:
+    def test_future_version_warning(
+        self, tmp_path: object, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """user_version > LATEST_VERSION logs a warning and does not error."""
         db_path = str(tmp_path / "future.db")  # type: ignore[operator]
         conn = sqlite3.connect(db_path)

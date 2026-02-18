@@ -68,9 +68,7 @@ class ClaudeAdapter(FormatAdapter):
         Returns:
             Absolute file path, or ``None`` if not found.
         """
-        claude_projects_dir = os.path.join(
-            os.path.expanduser("~"), ".claude", "projects"
-        )
+        claude_projects_dir = os.path.join(os.path.expanduser("~"), ".claude", "projects")
         if not os.path.isdir(claude_projects_dir):
             return None
 
@@ -80,9 +78,7 @@ class ClaudeAdapter(FormatAdapter):
             encoded_name = "-" + encoded_name
 
         # Try exact match.
-        exact_path = os.path.join(
-            claude_projects_dir, encoded_name, "memory", "MEMORY.md"
-        )
+        exact_path = os.path.join(claude_projects_dir, encoded_name, "memory", "MEMORY.md")
         if os.path.isfile(exact_path):
             return exact_path
 
@@ -95,9 +91,7 @@ class ClaudeAdapter(FormatAdapter):
 
         for entry in entries:
             if entry.endswith("-" + project_dir_name):
-                candidate = os.path.join(
-                    claude_projects_dir, entry, "memory", "MEMORY.md"
-                )
+                candidate = os.path.join(claude_projects_dir, entry, "memory", "MEMORY.md")
                 if os.path.isfile(candidate):
                     return candidate
 
@@ -109,9 +103,7 @@ class ClaudeAdapter(FormatAdapter):
 
     def is_installed(self) -> bool:
         """Check if Claude Code is installed (``~/.claude/`` exists)."""
-        return os.path.isdir(
-            os.path.join(os.path.expanduser("~"), ".claude")
-        )
+        return os.path.isdir(os.path.join(os.path.expanduser("~"), ".claude"))
 
     def export_memories(
         self,
@@ -138,7 +130,9 @@ class ClaudeAdapter(FormatAdapter):
             return 0
 
         has_categories = any(m.metadata.get("category") for m in memories)
-        sections = group_by_category(memories) if has_categories else group_by_topic_or_tier(memories)
+        sections = (
+            group_by_category(memories) if has_categories else group_by_topic_or_tier(memories)
+        )
         lines = self._build_markdown(sections)
 
         truncated_count = 0

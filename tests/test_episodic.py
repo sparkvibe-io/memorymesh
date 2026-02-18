@@ -111,8 +111,7 @@ class TestMigrationV1ToV2:
 
         conn = sqlite3.connect(db_path)
         cur = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='index' "
-            "AND name='idx_memories_session_id'"
+            "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_memories_session_id'"
         )
         assert cur.fetchone() is not None
         conn.close()

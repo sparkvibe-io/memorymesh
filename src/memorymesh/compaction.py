@@ -329,9 +329,7 @@ def compact(
 
     unpaired = [m for m in memories if m.id not in already_paired]
     if len(unpaired) >= 2:
-        embedding_pairs = find_near_duplicates(
-            unpaired, embeddings_fn=None, threshold=0.9
-        )
+        embedding_pairs = find_near_duplicates(unpaired, embeddings_fn=None, threshold=0.9)
         pairs.extend(embedding_pairs)
 
     if not pairs:

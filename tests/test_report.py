@@ -127,11 +127,15 @@ def test_report_via_cli(tmp_path, capsys):
     mesh.remember("CLI report test", scope="project")
     mesh.close()
 
-    rc = main([
-        "--project-path", str(tmp_path / "project.db"),
-        "--global-path", str(tmp_path / "global.db"),
-        "report",
-    ])
+    rc = main(
+        [
+            "--project-path",
+            str(tmp_path / "project.db"),
+            "--global-path",
+            str(tmp_path / "global.db"),
+            "report",
+        ]
+    )
     assert rc == 0
     captured = capsys.readouterr()
     assert "MemoryMesh Memory Report" in captured.out

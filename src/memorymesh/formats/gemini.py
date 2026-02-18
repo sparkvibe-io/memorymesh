@@ -87,9 +87,7 @@ class GeminiAdapter(FormatAdapter):
 
     def is_installed(self) -> bool:
         """Check if Gemini CLI is installed (``~/.gemini/`` exists)."""
-        return os.path.isdir(
-            os.path.join(os.path.expanduser("~"), ".gemini")
-        )
+        return os.path.isdir(os.path.join(os.path.expanduser("~"), ".gemini"))
 
     def export_memories(
         self,
@@ -115,7 +113,9 @@ class GeminiAdapter(FormatAdapter):
             return 0
 
         has_categories = any(m.metadata.get("category") for m in memories)
-        sections = group_by_category(memories) if has_categories else group_by_topic_or_tier(memories)
+        sections = (
+            group_by_category(memories) if has_categories else group_by_topic_or_tier(memories)
+        )
         section_lines = self._build_section(sections)
 
         if line_limit and len(section_lines) > line_limit:
@@ -227,9 +227,7 @@ class GeminiAdapter(FormatAdapter):
             with open(gemini_path, encoding="utf-8") as f:
                 existing = f.read()
             if _SECTION_HEADING in existing:
-                messages.append(
-                    f"MemoryMesh section already present in {gemini_path}"
-                )
+                messages.append(f"MemoryMesh section already present in {gemini_path}")
                 return messages
             result = inject_section(existing, section)
         else:

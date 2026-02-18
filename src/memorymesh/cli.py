@@ -161,21 +161,13 @@ def _cmd_list(args: argparse.Namespace) -> int:
     text_width = max(20, term_width - fixed_width)
 
     # Header
-    header = (
-        f"{'ID':<8}  {'Scope':<7}  {'Imp.':>4}  {'Hits':>4}  "
-        f"{'Created':<16}  {'Text'}"
-    )
-    separator = (
-        f"{'─' * 8}  {'─' * 7}  {'─' * 4}  {'─' * 4}  "
-        f"{'─' * 16}  {'─' * text_width}"
-    )
+    header = f"{'ID':<8}  {'Scope':<7}  {'Imp.':>4}  {'Hits':>4}  {'Created':<16}  {'Text'}"
+    separator = f"{'─' * 8}  {'─' * 7}  {'─' * 4}  {'─' * 4}  {'─' * 16}  {'─' * text_width}"
     print(header)
     print(separator)
 
     for mem in memories:
-        text_preview = _truncate(
-            mem.text.replace("\n", " "), text_width
-        )
+        text_preview = _truncate(mem.text.replace("\n", " "), text_width)
         ts = _format_timestamp(mem.created_at.isoformat())
         print(
             f"{mem.id[:8]:<8}  {mem.scope:<7}  {mem.importance:4.2f}  "
@@ -218,10 +210,7 @@ def _cmd_search(args: argparse.Namespace) -> int:
 
     for mem in memories:
         text_preview = _truncate(mem.text.replace("\n", " "), text_width)
-        print(
-            f"{mem.id[:8]:<8}  {mem.scope:<7}  {mem.importance:4.2f}  "
-            f"{text_preview}"
-        )
+        print(f"{mem.id[:8]:<8}  {mem.scope:<7}  {mem.importance:4.2f}  {text_preview}")
 
     print(f'\n{len(memories)} result(s) for "{args.query}"')
     return 0
@@ -499,9 +488,7 @@ def _cmd_sync(args: argparse.Namespace) -> int:
                     mesh.close()
                     return 1
                 output_path = detected
-            count = sync_to_format(
-                mesh, adapter, output_path, scope=scope, limit=args.limit
-            )
+            count = sync_to_format(mesh, adapter, output_path, scope=scope, limit=args.limit)
             print(f"Exported {count} memories to {output_path}")
         else:
             input_path = args.from_file
@@ -520,9 +507,7 @@ def _cmd_sync(args: argparse.Namespace) -> int:
                     return 1
                 input_path = detected
             import_scope = scope if scope is not None else "project"
-            count = sync_from_format(
-                mesh, adapter, input_path, scope=import_scope
-            )
+            count = sync_from_format(mesh, adapter, input_path, scope=import_scope)
             print(f"Imported {count} new memories from {input_path}")
 
     mesh.close()
@@ -666,9 +651,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_list.add_argument(
         "--limit", type=int, default=20, help="Maximum memories to show (default: 20)."
     )
-    p_list.add_argument(
-        "--offset", type=int, default=0, help="Number of memories to skip."
-    )
+    p_list.add_argument("--offset", type=int, default=0, help="Number of memories to skip.")
     p_list.add_argument(
         "--format",
         choices=["table", "json"],
@@ -685,17 +668,13 @@ def _build_parser() -> argparse.ArgumentParser:
         default="all",
         help="Scope to search (default: all).",
     )
-    p_search.add_argument(
-        "--limit", type=int, default=10, help="Maximum results (default: 10)."
-    )
+    p_search.add_argument("--limit", type=int, default=10, help="Maximum results (default: 10).")
 
     # -- show ---------------------------------------------------------
     p_show = subparsers.add_parser(
         "show", help="Show full detail for a memory (supports partial ID)."
     )
-    p_show.add_argument(
-        "memory_id", help="Memory ID or prefix (first 6+ characters)."
-    )
+    p_show.add_argument("memory_id", help="Memory ID or prefix (first 6+ characters).")
 
     # -- stats --------------------------------------------------------
     p_stats = subparsers.add_parser("stats", help="Show memory statistics.")
@@ -707,9 +686,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # -- export -------------------------------------------------------
-    p_export = subparsers.add_parser(
-        "export", help="Export memories to JSON or HTML."
-    )
+    p_export = subparsers.add_parser("export", help="Export memories to JSON or HTML.")
     p_export.add_argument(
         "--format",
         choices=["json", "html"],
@@ -753,9 +730,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # -- sync ---------------------------------------------------------
-    p_sync = subparsers.add_parser(
-        "sync", help="Sync memories with AI tool markdown files."
-    )
+    p_sync = subparsers.add_parser("sync", help="Sync memories with AI tool markdown files.")
     p_sync.add_argument(
         "--to",
         dest="to_file",
@@ -796,9 +771,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # -- report -------------------------------------------------------
-    p_report = subparsers.add_parser(
-        "report", help="Generate a memory analytics report."
-    )
+    p_report = subparsers.add_parser("report", help="Generate a memory analytics report.")
     p_report.add_argument(
         "--scope",
         choices=["project", "global", "all"],

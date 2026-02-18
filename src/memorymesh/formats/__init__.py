@@ -184,9 +184,7 @@ def create_format_adapter(name: str) -> FormatAdapter:
     _ensure_adapters_loaded()
     if name not in _REGISTRY:
         available = ", ".join(sorted(_REGISTRY.keys()))
-        raise ValueError(
-            f"Unknown format {name!r}. Available: {available}"
-        )
+        raise ValueError(f"Unknown format {name!r}. Available: {available}")
     return _REGISTRY[name]()
 
 
@@ -357,14 +355,10 @@ def sync_to_all(
             output_path = adapter.detect_global_path()
 
         if output_path is None:
-            logger.debug(
-                "No output path found for %s, skipping", adapter.name
-            )
+            logger.debug("No output path found for %s, skipping", adapter.name)
             continue
 
-        count = sync_to_format(
-            mesh, adapter, output_path, scope=scope, limit=limit
-        )
+        count = sync_to_format(mesh, adapter, output_path, scope=scope, limit=limit)
         results[adapter.name] = count
 
     return results

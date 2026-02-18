@@ -109,8 +109,12 @@ class TestSessionStart:
     def test_returns_all_expected_keys(self, mesh: MemoryMesh) -> None:
         result = mesh.session_start()
         expected_keys = {
-            "user_profile", "guardrails", "common_mistakes",
-            "common_questions", "project_context", "last_session",
+            "user_profile",
+            "guardrails",
+            "common_mistakes",
+            "common_questions",
+            "project_context",
+            "last_session",
         }
         assert set(result.keys()) == expected_keys
 

@@ -141,11 +141,7 @@ def test_import_parses_bullets(tmp_path, adapter):
 def test_import_skips_headings_and_comments(tmp_path, adapter):
     md = tmp_path / "AGENTS.md"
     md.write_text(
-        "# Header\n"
-        "## Section\n"
-        "> Blockquote\n"
-        "<!-- standalone comment -->\n"
-        "- Actual memory\n"
+        "# Header\n## Section\n> Blockquote\n<!-- standalone comment -->\n- Actual memory\n"
     )
     entries = adapter.import_memories(str(md))
     assert len(entries) == 1

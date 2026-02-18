@@ -93,11 +93,7 @@ def test_export_empty_writes_placeholder(tmp_path, adapter):
 
 def test_import_parses_bullets(tmp_path, adapter):
     md = tmp_path / "MEMORY.md"
-    md.write_text(
-        "# Header\n\n"
-        "- [importance: 0.85] Decision A\n"
-        "- Plain text\n"
-    )
+    md.write_text("# Header\n\n- [importance: 0.85] Decision A\n- Plain text\n")
     entries = adapter.import_memories(str(md))
     assert len(entries) == 2
     assert entries[0] == ("Decision A", 0.85, {})

@@ -7,6 +7,7 @@ project root detection, and legacy migration.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -400,7 +401,9 @@ class TestProjectDetection:
 
     def test_detect_from_mcp_roots(self, tmp_path):
         """Picks up the first file:// URI from roots."""
-        roots = [{"uri": f"file://{tmp_path}"}]
+        # Use Path.as_uri() for correct file URIs on all platforms
+        # (e.g. file:///C:/Users/... on Windows, file:///tmp/... on Unix).
+        roots = [{"uri": Path(tmp_path).as_uri()}]
         assert detect_project_root(roots) == os.path.realpath(str(tmp_path))
 
     def test_detect_from_env(self, tmp_path, monkeypatch):

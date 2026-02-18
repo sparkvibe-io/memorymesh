@@ -18,9 +18,7 @@ if TYPE_CHECKING:
 # HTML comment importance pattern
 # ---------------------------------------------------------------------------
 
-_HTML_COMMENT_IMPORTANCE = re.compile(
-    r"<!--\s*memorymesh:importance=([\d.]+)\s*-->"
-)
+_HTML_COMMENT_IMPORTANCE = re.compile(r"<!--\s*memorymesh:importance=([\d.]+)\s*-->")
 """Regex to extract importance from HTML comment metadata."""
 
 _IMPORTANCE_PREFIX = re.compile(r"^\[importance:\s*([\d.]+)\]\s*(.*)$")
@@ -115,11 +113,7 @@ def group_by_topic_or_tier(
     if has_topics:
         for mem in memories:
             topic = mem.metadata.get("topic")
-            section_name = (
-                topic.strip().title()
-                if topic and isinstance(topic, str)
-                else "Other"
-            )
+            section_name = topic.strip().title() if topic and isinstance(topic, str) else "Other"
             sections.setdefault(section_name, []).append(mem)
     else:
         for mem in memories:
@@ -258,11 +252,7 @@ def inject_section(existing_content: str, section_content: str) -> str:
         rest = existing_content[start + len(heading) :]
         # Look for the next ## heading (same level or higher).
         next_heading = re.search(r"\n(?=## |\n# )", rest)
-        end = (
-            start + len(heading) + next_heading.start()
-            if next_heading
-            else len(existing_content)
-        )
+        end = start + len(heading) + next_heading.start() if next_heading else len(existing_content)
 
         # Reconstruct: before + new section + after
         before = existing_content[:start].rstrip()

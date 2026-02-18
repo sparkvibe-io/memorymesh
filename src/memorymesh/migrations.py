@@ -169,9 +169,7 @@ def ensure_schema(conn: sqlite3.Connection) -> int:
     for migration in MIGRATIONS:
         if migration.version <= current:
             continue
-        logger.info(
-            "Applying migration v%d: %s", migration.version, migration.description
-        )
+        logger.info("Applying migration v%d: %s", migration.version, migration.description)
         try:
             for stmt in migration.statements:
                 conn.execute(stmt)

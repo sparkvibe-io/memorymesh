@@ -135,10 +135,7 @@ def test_import_gemini_auto_section(tmp_path, adapter):
     """Gemini auto-added memories should be tagged with gemini_auto metadata."""
     md = tmp_path / "GEMINI.md"
     md.write_text(
-        "## Gemini Added Memories\n\n"
-        "- Gemini learned something\n\n"
-        "## User Notes\n\n"
-        "- User note\n"
+        "## Gemini Added Memories\n\n- Gemini learned something\n\n## User Notes\n\n- User note\n"
     )
     entries = adapter.import_memories(str(md))
     assert len(entries) == 2
