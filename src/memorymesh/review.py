@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from .auto_importance import score_importance
 from .compaction import text_similarity
 from .memory import GLOBAL_SCOPE, PROJECT_SCOPE, Memory
+from .store import detect_project_root
 
 if TYPE_CHECKING:
     from .core import MemoryMesh
@@ -100,24 +101,50 @@ _GLOBAL_INDICATORS: list[re.Pattern[str]] = [
 # ---------------------------------------------------------------------------
 
 
-def _detect_scope_mismatch(memories: list[Memory]) -> list[ReviewIssue]:
+def _detect_scope_mismatch(
+    memories: list[Memory],
+    project_name: str | None = None,
+) -> list[ReviewIssue]:
     """Detect memories stored in the wrong scope.
 
     Global memories containing project-specific indicators (file paths,
-    version+date combos) and project memories containing global-only
-    keywords (``"user prefers"``, ``"across all projects"``).
+    version+date combos, product/project names) and project memories
+    containing global-only keywords (``"user prefers"``, ``"across all
+    projects"``).
+
+    Global scope should contain only general, 50,000-foot knowledge:
+    personality, technology preferences, documentation standards,
+    approaches, guardrails.  Product names and product-specific content
+    belong in project scope.
 
     Args:
         memories: Memories to scan.
+        project_name: The project/product name to check for in global
+            memories.  If ``None``, auto-detected from the project root
+            directory name.
 
     Returns:
         A list of high-severity scope mismatch issues.
     """
     issues: list[ReviewIssue] = []
 
+    # Build a dynamic pattern for the project/product name.
+    extra_project_patterns: list[re.Pattern[str]] = []
+    if project_name is None:
+        root = detect_project_root()
+        if root:
+            import os
+
+            project_name = os.path.basename(root)
+    if project_name and len(project_name) >= 3:
+        # Match the name case-insensitively, as a whole word.
+        extra_project_patterns.append(re.compile(rf"\b{re.escape(project_name)}\b", re.IGNORECASE))
+
+    all_project_patterns = _PROJECT_INDICATORS + extra_project_patterns
+
     for mem in memories:
         if mem.scope == GLOBAL_SCOPE:
-            for pattern in _PROJECT_INDICATORS:
+            for pattern in all_project_patterns:
                 if pattern.search(mem.text):
                     issues.append(
                         ReviewIssue(
@@ -361,6 +388,7 @@ def review_memories(
     mesh: MemoryMesh,
     scope: str | None = None,
     detectors: list[str] | None = None,
+    project_name: str | None = None,
 ) -> ReviewResult:
     """Audit memories for quality issues.
 
@@ -375,6 +403,10 @@ def review_memories(
             Valid names: ``"scope_mismatch"``, ``"too_verbose"``,
             ``"uncategorized"``, ``"stale"``, ``"near_duplicate"``,
             ``"low_quality"``.
+        project_name: Optional project/product name to check for in
+            global memories.  If ``None``, auto-detected from the project
+            root directory name.  Global memories mentioning a product
+            name are flagged as scope mismatches.
 
     Returns:
         A :class:`ReviewResult` with all detected issues and a quality
@@ -400,9 +432,12 @@ def review_memories(
     else:
         active = _ALL_DETECTORS
 
-    # Run each detector.
-    for fn in active.values():
-        result.issues.extend(fn(memories))
+    # Run each detector.  scope_mismatch gets the extra project_name arg.
+    for name, fn in active.items():
+        if name == "scope_mismatch":
+            result.issues.extend(fn(memories, project_name=project_name))
+        else:
+            result.issues.extend(fn(memories))
 
     # Compute quality score.
     high_count = sum(1 for i in result.issues if i.severity == "high")
