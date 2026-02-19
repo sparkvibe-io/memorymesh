@@ -180,7 +180,7 @@ response = openai_client.chat.completions.create(
 | **[API Reference](https://sparkvibe-io.github.io/memorymesh/api/)** | Full Python API with all methods and parameters |
 | **[Architecture](https://sparkvibe-io.github.io/memorymesh/architecture/)** | System design, dual-store pattern, and schema migrations |
 | **[FAQ](https://sparkvibe-io.github.io/memorymesh/faq/)** | Common questions answered |
-| **[Benchmarks](https://github.com/sparkvibe-io/memorymesh/blob/main/benchmarks/README.md)** | Performance numbers and how to run benchmarks |
+| **[Benchmarks](https://sparkvibe-io.github.io/memorymesh/benchmarks/)** | Performance numbers and how to run benchmarks |
 
 ---
 
@@ -188,11 +188,17 @@ response = openai_client.chat.completions.create(
 
 We are currently on **v3.0 -- Intelligent Memory**. Next up:
 
-### v4.0 -- Advanced
+### v4.0 -- Adaptive Memory
+- Smart sync -- export top-N most relevant memories, not all
+- Auto-remember via hooks/triggers -- no system prompt instructions needed
 - Graph-based memory relationships
-- Multi-device sync
 - Plugin system for custom relevance strategies
-- Streaming recall for large memory sets
+
+### v5.0 -- Anticipatory Intelligence
+- Question and behavioral learning across sessions
+- Proactive anticipation -- AI that knows what you need before you ask
+- Multi-device sync
+- Cross-session episodic continuity
 
 See the [full roadmap](https://github.com/sparkvibe-io/memorymesh/blob/main/ROADMAP.md) for version history and completed milestones.
 

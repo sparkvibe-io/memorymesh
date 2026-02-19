@@ -44,9 +44,18 @@ This document tracks the full version history and upcoming plans for MemoryMesh.
 - Memory hygiene: `update()` API for in-place edits and scope migration, `review` system for auditing memory quality
 - Subject-based scope inference: automatically routes memories to project or global scope based on text content
 
-## v4.0 -- Advanced
+## v4.0 -- Adaptive Memory
 
+- Smart sync -- export top-N most relevant memories per project, not all
+- Auto-remember via hooks/triggers -- no system prompt instructions needed
 - Graph-based memory relationships
-- Multi-device sync
 - Plugin system for custom relevance strategies
 - Streaming recall for large memory sets
+
+## v5.0 -- Anticipatory Intelligence
+
+- Question learning -- store questions users ask, proactively address similar ones in future sessions
+- Behavioral learning -- track coding styles, interaction habits, preferred approaches across sessions
+- Proactive anticipation -- use accumulated behavioral data to anticipate needs across all LLMs
+- Multi-device sync -- same memory available on every machine
+- Cross-session episodic continuity -- understand narrative arcs that flat files cannot represent
