@@ -839,6 +839,7 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with the new memory ID.
         """
+        assert self._mesh is not None  # Guarded by _handle_tools_call
         text = args.get("text")
         if not text or not isinstance(text, str):
             return self._tool_error("'text' is required and must be a non-empty string.")
@@ -931,6 +932,7 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with a list of matching memories.
         """
+        assert self._mesh is not None  # Guarded by _handle_tools_call
         query = args.get("query")
         if not query or not isinstance(query, str):
             return self._tool_error("'query' is required and must be a non-empty string.")
@@ -989,6 +991,7 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response indicating success or failure.
         """
+        assert self._mesh is not None  # Guarded by _handle_tools_call
         memory_id = args.get("memory_id")
         if not memory_id or not isinstance(memory_id, str):
             return self._tool_error("'memory_id' is required and must be a string.")
@@ -1012,6 +1015,7 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with the count of deleted memories.
         """
+        assert self._mesh is not None  # Guarded by _handle_tools_call
         scope = args.get("scope", PROJECT_SCOPE)
         if scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
             return self._tool_error("'scope' must be 'project' or 'global'.")
@@ -1033,6 +1037,7 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with memory statistics.
         """
+        assert self._mesh is not None  # Guarded by _handle_tools_call
         scope = args.get("scope")  # None means combined
         if scope is not None and scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
             return self._tool_error("'scope' must be 'project', 'global', or omitted.")
@@ -1061,6 +1066,7 @@ class MemoryMeshMCPServer:
             MCP content response with structured session context
             including store health information.
         """
+        assert self._mesh is not None  # Guarded by _handle_tools_call
         project_context = args.get("project_context")
         if project_context is not None and not isinstance(project_context, str):
             return self._tool_error("'project_context' must be a string.")
@@ -1096,6 +1102,7 @@ class MemoryMeshMCPServer:
             MCP content response with the updated memory info, or an
             error if the memory was not found.
         """
+        assert self._mesh is not None  # Guarded by _handle_tools_call
         memory_id = args.get("memory_id")
         if not memory_id or not isinstance(memory_id, str):
             return self._tool_error("'memory_id' is required and must be a non-empty string.")
@@ -1161,6 +1168,7 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with review issues and quality score.
         """
+        assert self._mesh is not None  # Guarded by _handle_tools_call
         from .review import review_memories
 
         scope = args.get("scope")
