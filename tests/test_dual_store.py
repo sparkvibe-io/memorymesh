@@ -422,6 +422,8 @@ class TestProjectDetection:
         """Returns None when no project signals are present."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.delenv("MEMORYMESH_PROJECT_ROOT", raising=False)
+        # Prevent walk-up from matching markers in CI runner parent directories.
+        monkeypatch.setattr("memorymesh.store._has_project_marker", lambda d: False)
         assert detect_project_root(None) is None
 
 
