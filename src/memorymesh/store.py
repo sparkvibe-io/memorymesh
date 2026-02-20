@@ -37,23 +37,55 @@ _LEGACY_DB = _DEFAULT_DB
 _UNSET: Any = object()
 
 
-def detect_project_root(roots: list[dict[str, Any]] | None = None) -> str | None:
+# Project root marker files/directories.  A directory containing any of
+# these is considered a project root.
+_PROJECT_MARKERS = (
+    ".git",
+    "pyproject.toml",
+    "Cargo.toml",
+    "package.json",
+    "go.mod",
+    ".hg",
+    "build.gradle",
+    "pom.xml",
+    "CMakeLists.txt",
+    "Makefile",
+    ".memorymesh",
+)
+
+
+def _has_project_marker(directory: str) -> bool:
+    """Check whether *directory* contains a recognised project marker."""
+    return any(os.path.exists(os.path.join(directory, marker)) for marker in _PROJECT_MARKERS)
+
+
+def detect_project_root(
+    roots: list[dict[str, Any]] | None = None,
+    diagnostics: list[str] | None = None,
+) -> str | None:
     """Detect the project root directory.
 
     Priority:
         1. First URI in *roots* (from the MCP ``initialize`` request).
         2. ``MEMORYMESH_PROJECT_ROOT`` environment variable.
-        3. Current working directory (if it contains a ``.git`` directory
-           or a ``pyproject.toml`` file, indicating it is a project root).
+        3. Current working directory **or any ancestor** that contains a
+           project marker (``.git``, ``pyproject.toml``, ``Cargo.toml``,
+           ``package.json``, ``go.mod``, ``.hg``, ``build.gradle``,
+           ``pom.xml``, ``CMakeLists.txt``, ``Makefile``,
+           ``.memorymesh``).  This mirrors the way ``git`` walks upward
+           to find the repository root.
         4. ``None`` -- no project root detected.
 
     Args:
         roots: The ``roots`` list from the MCP ``initialize`` params.
+        diagnostics: If provided, human-readable descriptions of each
+            detection step are appended to this list.  Useful for error
+            messages and the ``status`` tool.
 
     Returns:
         An absolute directory path, or ``None``.
     """
-    # 1. MCP roots
+    # 1. MCP roots -- trust the client's explicit workspace declaration.
     if roots:
         uri = roots[0].get("uri", "")
         if uri.startswith("file://"):
@@ -62,19 +94,55 @@ def detect_project_root(roots: list[dict[str, Any]] | None = None) -> str | None
             # (e.g. /C:/Users/... → C:\Users\... on Windows).
             path = url2pathname(unquote(parsed.path))
             if os.path.isdir(path):
-                return os.path.realpath(path)
+                real_path = os.path.realpath(path)
+                if diagnostics is not None:
+                    diagnostics.append(f"MCP roots: {real_path} (accepted)")
+                return real_path
+            elif diagnostics is not None:
+                diagnostics.append(f"MCP roots: {path} (directory does not exist)")
+        elif diagnostics is not None:
+            diagnostics.append(f"MCP roots: non-file URI '{uri[:60]}' (skipped)")
+    elif diagnostics is not None:
+        diagnostics.append("MCP roots: not provided by client")
 
     # 2. Environment variable
     env_root = os.environ.get("MEMORYMESH_PROJECT_ROOT")
     if env_root and os.path.isdir(env_root):
+        if diagnostics is not None:
+            diagnostics.append(f"MEMORYMESH_PROJECT_ROOT: {env_root} (found)")
         return os.path.realpath(env_root)
+    elif diagnostics is not None:
+        diagnostics.append(
+            f"MEMORYMESH_PROJECT_ROOT: {'not set' if not env_root else env_root + ' (not a directory)'}"
+        )
 
-    # 3. CWD heuristic
+    # 3. Walk up from CWD looking for project markers (like git does).
     cwd = os.getcwd()
-    if os.path.isdir(os.path.join(cwd, ".git")) or os.path.isfile(
-        os.path.join(cwd, "pyproject.toml")
-    ):
-        return os.path.realpath(cwd)
+    current = os.path.realpath(cwd)
+    walked: list[str] = []
+    while True:
+        walked.append(current)
+        if _has_project_marker(current):
+            if diagnostics is not None:
+                diagnostics.append(f"CWD walk-up: {current} (project marker found)")
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            # Reached filesystem root.
+            break
+        current = parent
+
+    if diagnostics is not None:
+        if len(walked) == 1:
+            diagnostics.append(
+                f"CWD: {cwd} (no project marker found — "
+                f"checked {', '.join(_PROJECT_MARKERS)})"
+            )
+        else:
+            diagnostics.append(
+                f"CWD walk-up: checked {len(walked)} directories from {cwd} "
+                f"to / (no project marker found)"
+            )
 
     return None
 

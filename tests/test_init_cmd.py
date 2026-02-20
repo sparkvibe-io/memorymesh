@@ -67,7 +67,7 @@ def test_init_skips_existing_memory_section(tmp_path, capsys):
 
 
 def test_init_configures_mcp(tmp_path, monkeypatch, capsys):
-    """init writes MCP server config to ~/.claude/claude_code_config.json."""
+    """init writes MCP server config to ~/.claude/settings.json."""
     fake_home = tmp_path / "home"
     fake_home.mkdir()
     monkeypatch.setenv("HOME", str(fake_home))
@@ -80,7 +80,7 @@ def test_init_configures_mcp(tmp_path, monkeypatch, capsys):
     rc = run_init(project_path=str(project_dir), skip_mcp=False, skip_claude_md=True)
     assert rc == 0
 
-    config_path = fake_home / ".claude" / "claude_code_config.json"
+    config_path = fake_home / ".claude" / "settings.json"
     assert config_path.is_file()
     config = json.loads(config_path.read_text())
     assert "mcpServers" in config
@@ -93,7 +93,7 @@ def test_init_merges_existing_mcp_config(tmp_path, monkeypatch, capsys):
     fake_home = tmp_path / "home"
     claude_dir = fake_home / ".claude"
     claude_dir.mkdir(parents=True)
-    config_path = claude_dir / "claude_code_config.json"
+    config_path = claude_dir / "settings.json"
     config_path.write_text(
         json.dumps({"mcpServers": {"other-server": {"command": "other-cmd", "args": []}}})
     )

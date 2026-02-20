@@ -1016,7 +1016,14 @@ class MemoryMesh:
         if allow_none:
             return None  # type: ignore[return-value]
         raise RuntimeError(
-            "No project database configured. Pass 'path' to MemoryMesh() or use scope='global'."
+            "No project database configured. "
+            "The project root could not be detected automatically.\n"
+            "Fix options:\n"
+            "  1. Use the 'configure_project' tool with your project path\n"
+            "  2. Set MEMORYMESH_PROJECT_ROOT=/path/to/project in MCP server env config\n"
+            "  3. Set MEMORYMESH_PATH=/path/to/project/.memorymesh/memories.db in env config\n"
+            "  4. Launch your AI tool from within a project directory\n"
+            "Fallback: Use scope='global' for non-project memories."
         )
 
     def _get_candidates(

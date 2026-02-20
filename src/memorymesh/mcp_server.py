@@ -364,6 +364,41 @@ TOOLS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "name": "status",
+        "description": (
+            "Get MemoryMesh health status: project store, global store, "
+            "embedding provider, and version. Use this to diagnose configuration "
+            "issues. If project store is not configured, shows what detection "
+            "was attempted and how to fix it."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "configure_project",
+        "description": (
+            "Set the project root at runtime without restarting the server. "
+            "Use this when automatic project detection failed and you know "
+            "the correct project path. Creates the project database at "
+            "<path>/.memorymesh/memories.db."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": (
+                        "Absolute path to the project root directory. "
+                        "The project database will be stored at <path>/.memorymesh/memories.db."
+                    ),
+                },
+            },
+            "required": ["path"],
+        },
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -383,14 +418,15 @@ class MemoryMeshMCPServer:
     """
 
     def __init__(self, mesh: MemoryMesh | None = None) -> None:
-        if mesh is not None:
-            self._mesh = mesh
-        else:
-            self._mesh = self._create_mesh_from_env()
+        # Lazy initialization: if no mesh is provided, it will be created
+        # in _handle_initialize when the client connects.  This avoids
+        # the old double-init pattern (create → close → recreate).
+        self._mesh: MemoryMesh | None = mesh
         self._initialized = False
         self._project_root: str | None = None
+        self._detection_diagnostics: list[str] = []
         self._client_name: str = "unknown"
-        logger.info("MemoryMeshMCPServer created with mesh=%r", self._mesh)
+        logger.info("MemoryMeshMCPServer created (lazy init, mesh=%r)", self._mesh)
 
     # ------------------------------------------------------------------
     # Factory
@@ -490,7 +526,8 @@ class MemoryMeshMCPServer:
                 self._handle_message(message)
 
         logger.info("stdin closed, shutting down.")
-        self._mesh.close()
+        if self._mesh is not None:
+            self._mesh.close()
 
     # ------------------------------------------------------------------
     # Dispatch
@@ -563,7 +600,7 @@ class MemoryMeshMCPServer:
     def _handle_initialize(self, params: dict[str, Any]) -> dict[str, Any]:
         """Handle the ``initialize`` request.
 
-        Detects the project root from MCP ``roots`` and recreates the
+        Detects the project root from MCP ``roots`` and creates the
         MemoryMesh instance with the correct project database path.
 
         Args:
@@ -581,18 +618,31 @@ class MemoryMeshMCPServer:
 
         # Detect project root from MCP roots list.
         roots = params.get("roots")
-        project_root = detect_project_root(roots)
+        diagnostics: list[str] = []
+        project_root = detect_project_root(roots, diagnostics=diagnostics)
         self._project_root = project_root
+        self._detection_diagnostics = diagnostics
 
-        # Recreate mesh with project-aware paths.
-        self._mesh.close()
+        # Close any pre-existing mesh (e.g. one passed to __init__ for testing).
+        if self._mesh is not None:
+            self._mesh.close()
+
+        # Create mesh with project-aware paths (single init, no double-create).
         self._mesh = self._create_mesh_from_env(project_root=project_root)
-        logger.info(
-            "Project root: %s  project_db: %s  global_db: %s",
-            project_root,
-            self._mesh.project_path,
-            self._mesh.global_path,
-        )
+
+        if project_root is None:
+            logger.warning(
+                "No project root detected. Only global memories available. "
+                "Detection attempted:\n%s",
+                "\n".join(f"  - {d}" for d in diagnostics),
+            )
+        else:
+            logger.info(
+                "Project root: %s  project_db: %s  global_db: %s",
+                project_root,
+                self._mesh.project_path,
+                self._mesh.global_path,
+            )
 
         return {
             "protocolVersion": MCP_PROTOCOL_VERSION,
@@ -658,6 +708,8 @@ class MemoryMeshMCPServer:
         """
         if not self._initialized:
             return self._tool_error("Server not initialized. Send 'initialize' request first.")
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not available. Initialize failed.")
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
 
@@ -672,6 +724,8 @@ class MemoryMeshMCPServer:
             "session_start": self._tool_session_start,
             "update_memory": self._tool_update_memory,
             "review_memories": self._tool_review_memories,
+            "status": self._tool_status,
+            "configure_project": self._tool_configure_project,
         }
 
         handler = tool_handlers.get(tool_name)  # type: ignore[arg-type]
@@ -720,6 +774,14 @@ class MemoryMeshMCPServer:
                 "error": {
                     "code": -32602,
                     "message": f"Unknown prompt: {prompt_name}",
+                },
+            }
+
+        if self._mesh is None:
+            return {
+                "error": {
+                    "code": -32603,
+                    "message": "MemoryMesh not initialized yet.",
                 },
             }
 
@@ -996,13 +1058,31 @@ class MemoryMeshMCPServer:
             args: Tool arguments. May include ``project_context``.
 
         Returns:
-            MCP content response with structured session context.
+            MCP content response with structured session context
+            including store health information.
         """
         project_context = args.get("project_context")
         if project_context is not None and not isinstance(project_context, str):
             return self._tool_error("'project_context' must be a string.")
 
         context = self._mesh.session_start(project_context=project_context)
+
+        # Inject store health so the agent knows immediately if something
+        # is misconfigured.
+        store_health: dict[str, Any] = {
+            "global_store": "ok",
+        }
+        if self._mesh.project_path:
+            store_health["project_store"] = "ok"
+            store_health["project_root"] = self._project_root
+        else:
+            store_health["project_store"] = "not_configured"
+            store_health["warning"] = (
+                "No project root detected. Project-scoped memories are unavailable. "
+                "Use the 'configure_project' tool or set MEMORYMESH_PROJECT_ROOT."
+            )
+        context["store_health"] = store_health
+
         return self._tool_success(json.dumps(context, indent=2))
 
     def _tool_update_memory(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -1108,6 +1188,95 @@ class MemoryMeshMCPServer:
             "scanned_scope": review_result.scanned_scope,
             "issue_count": len(issues_list),
             "issues": issues_list,
+        }
+        return self._tool_success(json.dumps(result, indent=2))
+
+    def _tool_status(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Execute the ``status`` tool.
+
+        Args:
+            args: Tool arguments (none required).
+
+        Returns:
+            MCP content response with health diagnostics.
+        """
+        embedding_name = os.environ.get("MEMORYMESH_EMBEDDING", "none")
+
+        project_info: dict[str, Any]
+        if self._mesh and self._mesh.project_path:
+            project_info = {
+                "status": "ok",
+                "path": self._mesh.project_path,
+                "count": self._mesh.count(scope=PROJECT_SCOPE),
+            }
+        else:
+            project_info = {
+                "status": "not_configured",
+                "reason": "No project root detected",
+                "detection_attempted": self._detection_diagnostics,
+                "fix_options": [
+                    "Use the 'configure_project' tool with path='/your/project/root'",
+                    "Set MEMORYMESH_PROJECT_ROOT=/path/to/project in MCP server env config",
+                    "Set MEMORYMESH_PATH=/path/to/project/.memorymesh/memories.db in env config",
+                    "Launch your AI tool from within a project directory",
+                ],
+            }
+
+        global_info: dict[str, Any] = {
+            "status": "ok",
+            "path": self._mesh.global_path if self._mesh else "unknown",
+            "count": self._mesh.count(scope=GLOBAL_SCOPE) if self._mesh else 0,
+        }
+
+        result: dict[str, Any] = {
+            "version": SERVER_INFO["version"],
+            "project_root": self._project_root,
+            "project_store": project_info,
+            "global_store": global_info,
+            "embedding": {
+                "provider": embedding_name,
+            },
+        }
+        return self._tool_success(json.dumps(result, indent=2))
+
+    def _tool_configure_project(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Execute the ``configure_project`` tool.
+
+        Dynamically sets the project root and creates the project database
+        without requiring a server restart.
+
+        Args:
+            args: Tool arguments. Must include ``path``.
+
+        Returns:
+            MCP content response confirming the new configuration.
+        """
+        path = args.get("path")
+        if not path or not isinstance(path, str):
+            return self._tool_error("'path' is required and must be a non-empty string.")
+
+        path = os.path.realpath(os.path.expanduser(path))
+        if not os.path.isdir(path):
+            return self._tool_error(f"Directory does not exist: {path}")
+
+        # Update project root and recreate the mesh.
+        self._project_root = path
+        if self._mesh is not None:
+            self._mesh.close()
+        self._mesh = self._create_mesh_from_env(project_root=path)
+        self._detection_diagnostics = [f"Manually configured via configure_project: {path}"]
+
+        logger.info(
+            "Project configured at runtime: root=%s  db=%s",
+            path,
+            self._mesh.project_path,
+        )
+
+        result = {
+            "project_root": path,
+            "project_db": self._mesh.project_path,
+            "global_db": self._mesh.global_path,
+            "message": f"Project configured successfully. Database at {self._mesh.project_path}",
         }
         return self._tool_success(json.dumps(result, indent=2))
 

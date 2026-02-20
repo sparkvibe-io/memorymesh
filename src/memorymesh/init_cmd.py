@@ -93,7 +93,7 @@ def _ensure_memorymesh_dir(project_root: str) -> bool:
 def _configure_claude_mcp() -> str:
     """Write or update the Claude Code MCP config to include memorymesh.
 
-    The config file is located at ``~/.claude/claude_code_config.json``.
+    The config file is located at ``~/.claude/settings.json``.
     If the file exists, the memorymesh server entry is merged without
     destroying other server entries.
 
@@ -101,7 +101,7 @@ def _configure_claude_mcp() -> str:
         A status message describing what was done.
     """
     config_dir = os.path.join(os.path.expanduser("~"), ".claude")
-    config_path = os.path.join(config_dir, "claude_code_config.json")
+    config_path = os.path.join(config_dir, "settings.json")
 
     # Load existing config or start fresh.
     config: dict = {}
