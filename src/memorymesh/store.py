@@ -135,8 +135,7 @@ def detect_project_root(
     if diagnostics is not None:
         if len(walked) == 1:
             diagnostics.append(
-                f"CWD: {cwd} (no project marker found — "
-                f"checked {', '.join(_PROJECT_MARKERS)})"
+                f"CWD: {cwd} (no project marker found — checked {', '.join(_PROJECT_MARKERS)})"
             )
         else:
             diagnostics.append(

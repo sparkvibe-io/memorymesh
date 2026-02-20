@@ -394,10 +394,12 @@ class TestLazyInitialization:
         """Tool calls before initialize return an error."""
         server = MemoryMeshMCPServer()
 
-        result = server._handle_tools_call({
-            "name": "recall",
-            "arguments": {"query": "test"},
-        })
+        result = server._handle_tools_call(
+            {
+                "name": "recall",
+                "arguments": {"query": "test"},
+            }
+        )
 
         assert result["isError"] is True
         data = json.loads(result["content"][0]["text"])
@@ -468,16 +470,12 @@ class TestInitConfigPath:
 
         fake_home = tmp_path / "home"
         fake_home.mkdir()
-        monkeypatch.setattr(
-            os.path, "expanduser", lambda p: p.replace("~", str(fake_home))
-        )
+        monkeypatch.setattr(os.path, "expanduser", lambda p: p.replace("~", str(fake_home)))
 
         project_dir = tmp_path / "project"
         project_dir.mkdir()
 
-        rc = run_init(
-            project_path=str(project_dir), skip_mcp=False, skip_claude_md=True
-        )
+        rc = run_init(project_path=str(project_dir), skip_mcp=False, skip_claude_md=True)
         assert rc == 0
 
         # settings.json should exist
