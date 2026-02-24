@@ -71,8 +71,8 @@ node_modules/
 site/
 
 # Internal working folders (not for public repo)
-publicity/
-critique/
+archive/publicity/
+archive/critique/
 
 # Build artifacts
 *.so

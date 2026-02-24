@@ -181,21 +181,20 @@ response = openai_client.chat.completions.create(
 
 ## Roadmap
 
-We are currently on **v3.0 -- Intelligent Memory**. Next up:
+MemoryMesh serves two audiences: AI tool users (invisible backend for .md files) and developers (embeddable library). Currently at **v3.1**.
 
 ### v4.0 -- Invisible Memory
-- Invisible backend -- MemoryMesh powers .md files silently, no MCP tool calls needed
-- Smart sync -- export top-N most relevant memories per project, not a full dump
-- Auto-remember via hooks -- persist decisions and patterns without AI cooperation
-- Task-aware injection -- targeted context based on what the user is actually doing
+- **Smart Sync** -- Top-N relevance-ranked export to .md files, not a full dump
+- **Auto-Remember Hooks** -- Capture decisions and patterns without AI cooperation
+- **Lean MCP** -- Fewer, more powerful tools with less schema overhead
+- **Task-Aware Injection** -- Targeted context based on what the user is actually doing
 
 ### v5.0 -- Anticipatory Intelligence
 - Question and behavioral learning across sessions
 - Proactive anticipation -- AI that knows what you need before you ask
 - Multi-device sync
-- Cross-session episodic continuity
 
-See the [full roadmap](https://github.com/sparkvibe-io/memorymesh/blob/main/ROADMAP.md) for version history and completed milestones.
+See the [full roadmap](https://github.com/sparkvibe-io/memorymesh/blob/main/ROADMAP.md) for details and completed milestones.
 
 ---
 
