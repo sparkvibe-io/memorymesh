@@ -95,6 +95,7 @@ nav:
     - Architecture: architecture.md
     - Benchmarks: benchmarks.md
   - Community:
+    - Roadmap: roadmap.md
     - FAQ: faq.md
     - Contributing: contributing.md
 
