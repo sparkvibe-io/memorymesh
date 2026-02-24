@@ -31,8 +31,8 @@ description: "MemoryMesh -- free, open-source AI memory library. Give any LLM pe
       <span class="stat-label">Blazing fast storage</span>
     </div>
     <div class="stat-card">
-      <span class="stat-number">~60x</span>
-      <span class="stat-label">Fewer tokens per session</span>
+      <span class="stat-number">Persistent</span>
+      <span class="stat-label">Memory across sessions</span>
     </div>
     <div class="stat-card">
       <span class="stat-number">Zero</span>
@@ -242,18 +242,20 @@ results = memory.recall("What does the user prefer?")
   </div>
 </div>
 
-<!-- Token savings -->
+<!-- Value proposition -->
 <div class="mm-section">
-  <h2>Saves You Money</h2>
-  <p>Without memory, token costs grow linearly every turn. MemoryMesh keeps them flat.</p>
+  <h2>What You Actually Get</h2>
+  <p>MemoryMesh isn't about cramming more into the context window. It's about making every session smarter from the start.</p>
   <table>
     <thead>
-      <tr><th>Turn</th><th>Without Memory</th><th>With MemoryMesh</th></tr>
+      <tr><th>Without MemoryMesh</th><th>With MemoryMesh</th></tr>
     </thead>
     <tbody>
-      <tr><td>5</td><td>~1,500 tokens</td><td>~400 tokens</td></tr>
-      <tr><td>20</td><td>~10,000 tokens</td><td>~450 tokens</td></tr>
-      <tr><td>50</td><td>~30,000 tokens</td><td>~500 tokens</td></tr>
+      <tr><td>Every session starts blank</td><td>Preferences, decisions, and patterns load automatically</td></tr>
+      <tr><td>Repeat yourself across tools</td><td>One memory store shared across Claude, Gemini, Codex, Cursor</td></tr>
+      <tr><td>AI re-discovers settled decisions</td><td>Past decisions recalled by semantic search</td></tr>
+      <tr><td>Same bugs reintroduced</td><td>Past mistakes remembered and avoided</td></tr>
+      <tr><td>Context locked in one tool</td><td>Portable memory that follows you</td></tr>
     </tbody>
   </table>
 </div>

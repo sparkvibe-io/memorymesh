@@ -44,13 +44,16 @@ This document tracks the full version history and upcoming plans for MemoryMesh.
 - Memory hygiene: `update()` API for in-place edits and scope migration, `review` system for auditing memory quality
 - Subject-based scope inference: automatically routes memories to project or global scope based on text content
 
-## v4.0 -- Adaptive Memory
+## v4.0 -- Invisible Memory (Direction B)
 
-- Smart sync -- export top-N most relevant memories per project, not all
-- Auto-remember via hooks/triggers -- no system prompt instructions needed
-- Graph-based memory relationships
-- Plugin system for custom relevance strategies
-- Streaming recall for large memory sets
+The AI shouldn't need to "use" MemoryMesh. It should just work.
+
+- Invisible backend -- MemoryMesh powers .md files silently, no MCP tool calls required for basic operation
+- Smart sync -- export top-N most relevant memories per project, not a full dump
+- Auto-remember via hooks -- PostToolUse/Stop hooks persist decisions and patterns without AI cooperation
+- Lean MCP -- consolidate tools, reduce schema overhead for projects that want dynamic recall
+- Task-aware injection -- session_start analyzes the first message and generates targeted context
+- Measured overhead -- instrument real token impact per session, self-optimize
 
 ## v5.0 -- Anticipatory Intelligence
 

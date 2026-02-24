@@ -39,33 +39,28 @@ That is it. Three lines to give your AI application persistent, semantic memory.
 
 ---
 
-## How MemoryMesh Saves You Money
+## What MemoryMesh Actually Does
 
-Without memory, every AI interaction requires re-sending the full conversation history. As conversations grow, so do your token costs -- linearly, every single turn.
-
-**MemoryMesh flips this model.** Instead of sending thousands of tokens of raw conversation history, you recall only the top-k most relevant memories (typically 3-5 short passages) and inject them as context. The conversation itself stays short.
-
-### Token cost comparison: 20-turn conversation
-
-| Turn | Without Memory (full history) | With MemoryMesh (recall top-5) |
-|------|-------------------------------|-------------------------------|
-| 1    | ~250 tokens                   | ~250 tokens                   |
-| 5    | ~1,500 tokens                 | ~400 tokens                   |
-| 10   | ~4,000 tokens                 | ~400 tokens                   |
-| 20   | ~10,000 tokens                | ~450 tokens                   |
-| 50   | ~30,000 tokens                | ~500 tokens                   |
-
-*Estimates based on typical conversational turns of ~250 tokens each, with MemoryMesh recalling 5 relevant memories (~50 tokens each) per turn.*
+AI tools start every session with amnesia. Your preferences, decisions, past mistakes, project context -- all gone. You repeat yourself. The AI re-discovers things you already told it. MemoryMesh fixes this.
 
 ### How it works
 
-1. **Store** -- After each interaction, `remember()` the key facts (not the full conversation).
-2. **Recall** -- Before the next interaction, `recall()` retrieves only the most relevant memories ranked by semantic similarity, recency, and importance.
-3. **Inject** -- Pass the recalled memories as system context to your LLM. The full conversation history is never needed.
+1. **Store** -- After each interaction, `remember()` the key facts, decisions, and patterns (not the full conversation).
+2. **Recall** -- At the start of the next session, `recall()` retrieves only the most relevant memories ranked by semantic similarity, recency, and importance.
+3. **Persist** -- Memories live in SQLite on your machine. They survive session restarts, tool switches, and context window resets.
 
-**The result:** Your input token count stays roughly constant regardless of how long the conversation has been going. At $3/million input tokens (Claude Sonnet pricing), a 50-turn conversation costs ~$0.09 without memory vs. ~$0.0015 with MemoryMesh -- a **60x reduction**.
+### Where MemoryMesh saves tokens
 
-This is not just a cost saving. It also means your application stays within context window limits, responds faster (fewer tokens to process), and retrieves only what is actually relevant instead of forcing the LLM to sift through thousands of tokens of conversational noise.
+When you build custom LLM applications using the **Python API**, MemoryMesh can replace full conversation history with compact recalled memories. Instead of re-sending thousands of tokens of prior turns, you inject only the 3-5 most relevant memories. Token costs stay roughly flat as conversations grow.
+
+**Note:** When used as an **MCP server** inside tools like Claude Code or Cursor, the host application manages its own context window. MemoryMesh adds persistent cross-session memory on top -- the value is continuity and intelligence, not raw token reduction.
+
+### The real value
+
+- **Cross-session persistence** -- Decisions made Monday are still known Friday.
+- **Cross-tool memory** -- What you teach Claude stays available in Gemini, Codex, and Cursor.
+- **Structured recall** -- Categories, importance scoring, time decay, and semantic search instead of brute-force history replay.
+- **Privacy** -- Everything local. No cloud, no telemetry, no data leaves your machine.
 
 ---
 
@@ -188,11 +183,11 @@ response = openai_client.chat.completions.create(
 
 We are currently on **v3.0 -- Intelligent Memory**. Next up:
 
-### v4.0 -- Adaptive Memory
-- Smart sync -- export top-N most relevant memories, not all
-- Auto-remember via hooks/triggers -- no system prompt instructions needed
-- Graph-based memory relationships
-- Plugin system for custom relevance strategies
+### v4.0 -- Invisible Memory
+- Invisible backend -- MemoryMesh powers .md files silently, no MCP tool calls needed
+- Smart sync -- export top-N most relevant memories per project, not a full dump
+- Auto-remember via hooks -- persist decisions and patterns without AI cooperation
+- Task-aware injection -- targeted context based on what the user is actually doing
 
 ### v5.0 -- Anticipatory Intelligence
 - Question and behavioral learning across sessions

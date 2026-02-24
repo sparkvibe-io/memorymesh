@@ -69,58 +69,13 @@ make all           # Run lint + test + typecheck
 
 ## Memory (MemoryMesh)
 
-MemoryMesh is configured as an MCP tool in this project. It adds persistent, structured, cross-tool memory on top of your existing memory system. Use it alongside your default memory -- it enhances, not replaces.
+MemoryMesh is configured as an MCP tool in this project for persistent cross-session memory.
 
-### At the start of every conversation
-
-Call `mcp__memorymesh__recall` with a summary of the user's request to load prior context, decisions, patterns, and past mistakes. This prevents repeating settled decisions and re-encountering solved problems.
-
-If `session_start` is available, call it to load the full user profile, guardrails, and project context.
-
-### When to `recall`
-
-- **Start of every conversation**: Check for relevant prior context before doing any work.
-- **Before making architectural decisions**: Check if this was decided before.
-- **When debugging**: Check if this problem or error was encountered previously.
-- **When unsure about conventions**: Check for stored patterns or preferences.
-
-### When to `remember`
-
-- **When the user says "remember this"**: Store it in MemoryMesh with an appropriate category.
-- **After completing a task**: Store key decisions, patterns discovered, and architectural choices.
-- **When the user teaches you something**: Immediately remember it with a category:
-  - User preferences, style choices → `category: "preference"` (auto-routes to global scope)
-  - Rules to follow → `category: "guardrail"` (auto-routes to global scope)
-  - Past mistakes → `category: "mistake"` (auto-routes to global scope)
-  - Architecture decisions → `category: "decision"` (auto-routes to project scope)
-  - Code conventions → `category: "pattern"` (auto-routes to project scope)
-  - Project facts → `category: "context"` (auto-routes to project scope)
-- **After fixing a non-trivial bug**: Remember the root cause and fix. Use `category: "mistake"`.
-- **When discovering undocumented patterns**: Use `category: "pattern"`.
-
-### What NOT to remember
-
-- Trivial single-use facts (e.g., "ran tests, they passed")
-- Information already written in this CLAUDE.md file
-- Temporary state or in-progress work details
-- Verbatim code snippets (store the insight, not the code)
-
-### Scope guidance
-
-- Use `scope: "project"` for project-specific decisions, architecture, and patterns.
-- Use `scope: "global"` for user preferences, identity, and cross-project facts.
-- Categories auto-route scope -- when using a category, you don't need to set scope manually.
-
-### Memory Hygiene
-
-Periodically (or when the user asks), review memory quality:
-
-1. Call `review_memories` to get an audit of issues
-2. For each high-severity issue, fix it:
-   - Scope mismatch: `update_memory(id, scope="project")` to move it to the correct scope
-   - Too verbose: `update_memory(id, text="<concise version>")` to distill
-   - Duplicate: `forget(duplicate_id)` to remove redundancy
-3. Call `review_memories` again to confirm quality score improved
+- Call `session_start` at the beginning of conversations to load prior context.
+- Use `remember` when the user explicitly asks to remember something, or after key decisions/bug fixes.
+- Use `recall` before architectural decisions or when debugging recurring issues.
+- Categories auto-route scope: preference/guardrail/mistake → global; decision/pattern/context → project.
+- Do not remember trivial facts, temporary state, or information already in this file.
 
 ## Code Conventions
 
