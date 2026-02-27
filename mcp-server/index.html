@@ -717,21 +717,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#hybrid-memory-architecture" class="md-nav__link">
+  <a href="#verify-your-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hybrid Memory Architecture
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#available-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Available Tools
+        Verify Your Setup
       
     </span>
   </a>
@@ -796,6 +785,28 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hybrid-memory-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hybrid Memory Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Tools
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1234,21 +1245,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#hybrid-memory-architecture" class="md-nav__link">
+  <a href="#verify-your-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hybrid Memory Architecture
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#available-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Available Tools
+        Verify Your Setup
       
     </span>
   </a>
@@ -1313,6 +1313,28 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hybrid-memory-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hybrid Memory Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Tools
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1571,34 +1593,18 @@
 </div>
 </div>
 <p>Ollama runs locally -- no API keys, no cloud, no cost. See <a href="../configuration/#using-ollama">Configuration &gt; Using Ollama</a> for full setup details and troubleshooting.</p>
-<h2 id="hybrid-memory-architecture">Hybrid Memory Architecture<a class="headerlink" href="#hybrid-memory-architecture" title="Permanent link">&para;</a></h2>
-<p>The MCP server uses a <strong>hybrid dual-store</strong> architecture that separates project-specific and global memories:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>~/.memorymesh/
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>  global.db                    &lt;- user preferences, identity, cross-project facts
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>&lt;project-root&gt;/.memorymesh/
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>  memories.db                  &lt;- project-specific memories, decisions, patterns
+<h2 id="verify-your-setup">Verify Your Setup<a class="headerlink" href="#verify-your-setup" title="Permanent link">&para;</a></h2>
+<p>After configuring the MCP server, verify it's working:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>memorymesh<span class="w"> </span>status
 </span></code></pre></div>
-<p>The project root is automatically detected from MCP client roots, the <code>MEMORYMESH_PROJECT_ROOT</code> environment variable, or the current working directory (if it contains <code>.git</code> or <code>pyproject.toml</code>).</p>
-<p>All tools accept an optional <code>scope</code> parameter (<code>"project"</code> or <code>"global"</code>):
-- <code>remember(scope="project")</code> -- stores in the project database (default)
-- <code>remember(scope="global")</code> -- stores in the user-wide database
-- <code>recall()</code> -- searches both databases by default
-- <code>forget_all(scope="project")</code> -- only clears project memories (default; global is protected)</p>
-<h2 id="available-tools">Available Tools<a class="headerlink" href="#available-tools" title="Permanent link">&para;</a></h2>
-<p>Once connected, your AI assistant gains these tools:</p>
+<p>You should see output showing:</p>
 <ul>
-<li><strong><code>remember</code></strong> -- Store facts, preferences, and decisions. Supports <code>scope</code>, <code>category</code> (auto-routes scope), and <code>auto_categorize</code> (detect category from text).</li>
-<li><strong><code>recall</code></strong> -- Search memories by natural language query (supports <code>scope</code>)</li>
-<li><strong><code>forget</code></strong> -- Delete a specific memory by ID (searches both stores)</li>
-<li><strong><code>forget_all</code></strong> -- Delete all memories in a scope (defaults to project)</li>
-<li><strong><code>memory_stats</code></strong> -- View memory count and timestamps (supports <code>scope</code>)</li>
-<li><strong><code>session_start</code></strong> -- Retrieve structured context for the start of a new session. Returns user profile, guardrails, common mistakes, and project context. Call this at the beginning of every conversation.</li>
-<li><strong><code>update_memory</code></strong> -- Update an existing memory's text, importance, metadata, or scope. Supports cross-scope migration.</li>
-<li><strong><code>review_memories</code></strong> -- Audit memories for quality issues. Returns issues list with severity ratings and an overall quality score (0-100).</li>
+<li><strong>Project store</strong>: Path to your project database (or "not configured" if no project root detected)</li>
+<li><strong>Global store</strong>: Path to <code>~/.memorymesh/global.db</code></li>
+<li><strong>Embedding provider</strong>: The configured provider (e.g., "none", "ollama")</li>
+<li><strong>Version</strong>: The current MemoryMesh version</li>
 </ul>
-<p>No API keys are needed for the default setup. The MCP server uses keyword matching out of the box. Add an embedding provider for semantic search.</p>
-<hr />
+<p>If the project store shows "not configured", make sure you're running from within a project directory (one containing <code>.git</code>, <code>pyproject.toml</code>, or similar markers).</p>
 <h2 id="teaching-your-ai-to-use-memorymesh">Teaching Your AI to Use MemoryMesh<a class="headerlink" href="#teaching-your-ai-to-use-memorymesh" title="Permanent link">&para;</a></h2>
 <p>Installing the MCP server gives your AI assistant the <em>ability</em> to use memory. But LLMs do not use tools proactively unless you tell them to. MemoryMesh works <strong>alongside</strong> your AI tool's existing memory -- it adds structured, searchable, cross-tool persistence on top of what's already there.</p>
 <p>The fastest way to set everything up is:</p>
@@ -1683,6 +1689,33 @@
 <li>Add the MCP server config (see <a href="#setup-by-tool">Setup by Tool</a> above).</li>
 <li>Add instructions to the tool's system prompt telling it to call <code>recall</code> at the start of conversations and <code>remember</code> after completing work. MemoryMesh works alongside existing memory -- no need to disable anything.</li>
 </ol>
+<h2 id="hybrid-memory-architecture">Hybrid Memory Architecture<a class="headerlink" href="#hybrid-memory-architecture" title="Permanent link">&para;</a></h2>
+<p>The MCP server uses a <strong>hybrid dual-store</strong> architecture that separates project-specific and global memories:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>~/.memorymesh/
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>  global.db                    &lt;- user preferences, identity, cross-project facts
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>&lt;project-root&gt;/.memorymesh/
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>  memories.db                  &lt;- project-specific memories, decisions, patterns
+</span></code></pre></div>
+<p>The project root is automatically detected from MCP client roots, the <code>MEMORYMESH_PROJECT_ROOT</code> environment variable, or the current working directory (if it contains <code>.git</code> or <code>pyproject.toml</code>).</p>
+<p>All tools accept an optional <code>scope</code> parameter (<code>"project"</code> or <code>"global"</code>):
+- <code>remember(scope="project")</code> -- stores in the project database (default)
+- <code>remember(scope="global")</code> -- stores in the user-wide database
+- <code>recall()</code> -- searches both databases by default
+- <code>forget_all(scope="project")</code> -- only clears project memories (default; global is protected)</p>
+<h2 id="available-tools">Available Tools<a class="headerlink" href="#available-tools" title="Permanent link">&para;</a></h2>
+<p>Once connected, your AI assistant gains these tools:</p>
+<ul>
+<li><strong><code>remember</code></strong> -- Store facts, preferences, and decisions. Supports <code>scope</code>, <code>category</code> (auto-routes scope), and <code>auto_categorize</code> (detect category from text).</li>
+<li><strong><code>recall</code></strong> -- Search memories by natural language query (supports <code>scope</code>)</li>
+<li><strong><code>forget</code></strong> -- Delete a specific memory by ID (searches both stores)</li>
+<li><strong><code>forget_all</code></strong> -- Delete all memories in a scope (defaults to project)</li>
+<li><strong><code>memory_stats</code></strong> -- View memory count and timestamps (supports <code>scope</code>)</li>
+<li><strong><code>session_start</code></strong> -- Retrieve structured context for the start of a new session. Returns user profile, guardrails, common mistakes, and project context. Call this at the beginning of every conversation.</li>
+<li><strong><code>update_memory</code></strong> -- Update an existing memory's text, importance, metadata, or scope. Supports cross-scope migration.</li>
+<li><strong><code>review_memories</code></strong> -- Audit memories for quality issues. Returns issues list with severity ratings and an overall quality score (0-100).</li>
+</ul>
+<p>No API keys are needed for the default setup. The MCP server uses keyword matching out of the box. Add an embedding provider for semantic search.</p>
 <hr />
 <p><a href="../">Back to Home</a></p>
 
