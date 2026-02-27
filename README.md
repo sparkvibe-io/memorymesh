@@ -178,7 +178,7 @@ pip install "memorymesh[all]"
 
 ## Roadmap
 
-**v4.0 -- Invisible Memory** is the current release. The goal: make MemoryMesh truly invisible. AI should not need to "use" it -- it should just work. Smart Sync, auto-remember hooks, leaner MCP tools, and task-aware context injection.
+**v4.0 -- Invisible Memory** has shipped (v4.0.1). Smart Sync, configurable relevance weights, EncryptedStore completeness, and security hardening. Available on [PyPI](https://pypi.org/project/memorymesh/4.0.1/) and [GitHub](https://github.com/sparkvibe-io/memorymesh/releases/tag/v4.0.1).
 
 **v5.0 -- Adaptive Memory** is next. Heuristic-based question frequency tracking, behavioral pattern detection, and multi-device sync via Syncthing/rsync. Lightweight and local -- no LLM-based anticipation, no cloud sync.
 
