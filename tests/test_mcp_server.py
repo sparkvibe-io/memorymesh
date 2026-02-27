@@ -538,9 +538,7 @@ class TestToolRecallHappyPath:
     def test_min_importance_filter(self, server: MemoryMeshMCPServer) -> None:
         _call_tool(server, "remember", {"text": "low imp recall", "importance": 0.1})
         _call_tool(server, "remember", {"text": "high imp recall", "importance": 0.9})
-        resp = _call_tool(
-            server, "recall", {"query": "imp recall", "min_importance": 0.5}
-        )
+        resp = _call_tool(server, "recall", {"query": "imp recall", "min_importance": 0.5})
         data = _get_result_data(resp)
         for mem in data["memories"]:
             assert mem["importance"] >= 0.5
@@ -607,9 +605,7 @@ class TestToolSessionStart:
 
     def test_project_context_forwarded(self, server: MemoryMeshMCPServer) -> None:
         """project_context param should be forwarded to mesh.session_start."""
-        resp = _call_tool(
-            server, "session_start", {"project_context": "working on auth"}
-        )
+        resp = _call_tool(server, "session_start", {"project_context": "working on auth"})
         assert not _is_error(resp)
 
     def test_bad_project_context_type(self, server: MemoryMeshMCPServer) -> None:
@@ -730,17 +726,19 @@ class TestHandleInitialize:
         assert result["serverInfo"]["name"] == "memorymesh"
         assert result["serverInfo"]["version"] == __version__
 
-    def test_sets_initialized_flag(self, uninitialized_server: MemoryMeshMCPServer, tmp_path) -> None:
+    def test_sets_initialized_flag(
+        self, uninitialized_server: MemoryMeshMCPServer, tmp_path
+    ) -> None:
         assert uninitialized_server._initialized is False
         with patch.dict(os.environ, {"MEMORYMESH_PATH": str(tmp_path / "p.db")}):
             uninitialized_server._handle_initialize({})
         assert uninitialized_server._initialized is True
 
-    def test_extracts_client_name(self, uninitialized_server: MemoryMeshMCPServer, tmp_path) -> None:
+    def test_extracts_client_name(
+        self, uninitialized_server: MemoryMeshMCPServer, tmp_path
+    ) -> None:
         with patch.dict(os.environ, {"MEMORYMESH_PATH": str(tmp_path / "p.db")}):
-            uninitialized_server._handle_initialize(
-                {"clientInfo": {"name": "cursor"}}
-            )
+            uninitialized_server._handle_initialize({"clientInfo": {"name": "cursor"}})
         assert uninitialized_server._client_name == "cursor"
 
     def test_default_client_name(self, uninitialized_server: MemoryMeshMCPServer, tmp_path) -> None:
@@ -748,17 +746,27 @@ class TestHandleInitialize:
             uninitialized_server._handle_initialize({})
         assert uninitialized_server._client_name == "unknown"
 
-    def test_project_root_from_roots(self, uninitialized_server: MemoryMeshMCPServer, tmp_path) -> None:
+    def test_project_root_from_roots(
+        self, uninitialized_server: MemoryMeshMCPServer, tmp_path
+    ) -> None:
         """When roots are provided, project root should be detected from them."""
-        project_dir = tmp_path / "myproject"
-        project_dir.mkdir()
-        roots = [{"uri": f"file://{project_dir}"}]
-        with patch.dict(os.environ, {}, clear=False):
-            # Remove MEMORYMESH_PATH so it doesn't interfere
-            env = {k: v for k, v in os.environ.items() if k != "MEMORYMESH_PATH"}
-            with patch.dict(os.environ, env, clear=True):
-                uninitialized_server._handle_initialize({"roots": roots})
-        assert uninitialized_server._project_root == str(project_dir)
+        project_dir = str(tmp_path / "myproject")
+        # Mock detect_project_root to isolate from URI parsing (which
+        # differs across platforms) and test that _handle_initialize
+        # forwards roots and stores the result.
+        with (
+            patch(
+                "memorymesh.mcp_server.detect_project_root",
+                return_value=project_dir,
+            ) as mock_detect,
+            patch.dict(os.environ, {"MEMORYMESH_EMBEDDING": "none"}, clear=False),
+        ):
+            roots = [{"uri": f"file://{project_dir}"}]
+            uninitialized_server._handle_initialize({"roots": roots})
+            mock_detect.assert_called_once()
+            # Verify roots were forwarded to detect_project_root.
+            assert mock_detect.call_args[0][0] == roots
+        assert uninitialized_server._project_root == project_dir
 
 
 class TestHandleInitialized:
@@ -788,9 +796,16 @@ class TestHandleToolsList:
         result = server._handle_tools_list({})
         names = {t["name"] for t in result["tools"]}
         expected = {
-            "remember", "recall", "forget", "forget_all",
-            "memory_stats", "session_start", "update_memory",
-            "review_memories", "status", "configure_project",
+            "remember",
+            "recall",
+            "forget",
+            "forget_all",
+            "memory_stats",
+            "session_start",
+            "update_memory",
+            "review_memories",
+            "status",
+            "configure_project",
         }
         assert names == expected
 
@@ -919,8 +934,13 @@ class TestGetHandler:
 
     def test_all_methods_have_handlers(self, server: MemoryMeshMCPServer) -> None:
         methods = [
-            "initialize", "initialized", "ping", "tools/list",
-            "tools/call", "prompts/list", "prompts/get",
+            "initialize",
+            "initialized",
+            "ping",
+            "tools/list",
+            "tools/call",
+            "prompts/list",
+            "prompts/get",
             "notifications/initialized",
         ]
         for method in methods:
@@ -943,9 +963,7 @@ class TestToolsCallGuards:
     """Tests for pre-flight checks in _handle_tools_call."""
 
     def test_before_initialize(self, uninitialized_server: MemoryMeshMCPServer) -> None:
-        resp = uninitialized_server._handle_tools_call(
-            {"name": "status", "arguments": {}}
-        )
+        resp = uninitialized_server._handle_tools_call({"name": "status", "arguments": {}})
         assert _is_error(resp)
         assert "not initialized" in _get_error_message(resp).lower()
 
@@ -958,9 +976,7 @@ class TestToolsCallGuards:
         assert "not available" in _get_error_message(resp).lower()
 
     def test_unknown_tool(self, server: MemoryMeshMCPServer) -> None:
-        resp = server._handle_tools_call(
-            {"name": "nonexistent_tool", "arguments": {}}
-        )
+        resp = server._handle_tools_call({"name": "nonexistent_tool", "arguments": {}})
         assert _is_error(resp)
         assert "unknown tool" in _get_error_message(resp).lower()
 
@@ -999,9 +1015,7 @@ class TestCreateMeshFromEnv:
         clean_env = {k: v for k, v in os.environ.items() if k != "MEMORYMESH_PATH"}
         clean_env.update(env)
         with patch.dict(os.environ, clean_env, clear=True):
-            mesh = MemoryMeshMCPServer._create_mesh_from_env(
-                project_root=str(project_dir)
-            )
+            mesh = MemoryMeshMCPServer._create_mesh_from_env(project_root=str(project_dir))
         expected = os.path.join(str(project_dir), ".memorymesh", "memories.db")
         assert mesh.project_path == expected
         mesh.close()
@@ -1014,9 +1028,7 @@ class TestCreateMeshFromEnv:
             "MEMORYMESH_EMBEDDING": "none",
         }
         with patch.dict(os.environ, env, clear=False):
-            mesh = MemoryMeshMCPServer._create_mesh_from_env(
-                project_root=str(tmp_path)
-            )
+            mesh = MemoryMeshMCPServer._create_mesh_from_env(project_root=str(tmp_path))
         assert mesh.project_path == explicit_path
         mesh.close()
 
