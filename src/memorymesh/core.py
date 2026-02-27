@@ -940,6 +940,73 @@ class MemoryMesh:
         return result
 
     # ------------------------------------------------------------------
+    # Smart Sync
+    # ------------------------------------------------------------------
+
+    def smart_sync(
+        self,
+        top_n: int = 20,
+        weights: RelevanceWeights | None = None,
+        scope: str | None = None,
+    ) -> list[Memory]:
+        """Return the top-N most relevant memories ranked for sync.
+
+        This method is the foundation for ``.md`` export -- callers (sync
+        module, format adapters) use it to get relevance-ranked memories
+        instead of dumping everything.
+
+        The default weights emphasise importance and recency over semantic
+        similarity (which is not meaningful without a query context).
+
+        Args:
+            top_n: Maximum number of memories to return.
+            weights: Custom :class:`RelevanceWeights` for sync ranking.
+                Defaults to ``semantic=0.0, recency=0.3, importance=0.5,
+                frequency=0.2``.
+            scope: ``"project"``, ``"global"``, or ``None`` (default)
+                to rank memories from both stores.
+
+        Returns:
+            Up to *top_n* :class:`Memory` objects sorted by descending
+            relevance.
+        """
+        if weights is None:
+            weights = RelevanceWeights(
+                semantic=0.0,
+                recency=0.3,
+                importance=0.5,
+                frequency=0.2,
+            )
+
+        sync_engine = RelevanceEngine(weights=weights)
+
+        candidates: list[Memory] = []
+
+        if scope in (None, PROJECT_SCOPE) and self._project_store:
+            project_mems = self._project_store.list_all(limit=10_000)
+            for m in project_mems:
+                m.scope = PROJECT_SCOPE
+            candidates.extend(project_mems)
+
+        if scope in (None, GLOBAL_SCOPE):
+            global_mems = self._global_store.list_all(limit=10_000)
+            for m in global_mems:
+                m.scope = GLOBAL_SCOPE
+            candidates.extend(global_mems)
+
+        if not candidates:
+            return []
+
+        # Apply decay before ranking.
+        sync_engine.apply_decay(candidates)
+
+        return sync_engine.rank(
+            candidates,
+            query_embedding=None,
+            k=top_n,
+        )
+
+    # ------------------------------------------------------------------
     # Context manager
     # ------------------------------------------------------------------
 

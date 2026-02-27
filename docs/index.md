@@ -27,8 +27,8 @@ description: "MemoryMesh -- free, open-source AI memory library. Give any LLM pe
 <div class="mm-section" style="padding-top:0">
   <div class="stats-row">
     <div class="stat-card">
-      <span class="stat-number">Instant</span>
-      <span class="stat-label">Blazing fast storage</span>
+      <span class="stat-number">Private</span>
+      <span class="stat-label">100% local storage</span>
     </div>
     <div class="stat-card">
       <span class="stat-number">Persistent</span>
@@ -83,29 +83,13 @@ results = memory.recall("What does the user prefer?")
 
 <div class="mm-section" style="padding-top:0" markdown>
 
-=== "Claude Code"
+=== "Any MCP Client"
 
     ```json
     { "mcpServers": { "memorymesh": { "command": "memorymesh-mcp" } } }
     ```
 
-=== "Gemini CLI"
-
-    ```json
-    { "mcpServers": { "memorymesh": { "command": "memorymesh-mcp" } } }
-    ```
-
-=== "Codex CLI"
-
-    ```json
-    { "mcpServers": { "memorymesh": { "command": "memorymesh-mcp" } } }
-    ```
-
-=== "Cursor"
-
-    ```json
-    { "mcpServers": { "memorymesh": { "command": "memorymesh-mcp" } } }
-    ```
+    Works with Claude Code, Gemini CLI, Codex CLI, Cursor, Windsurf, and any MCP-compatible tool.
 
 === "Python"
 
@@ -152,29 +136,6 @@ results = memory.recall("What does the user prefer?")
   </table>
 </div>
 
-<!-- What you get -->
-<div class="mm-section">
-  <h2>What You Get</h2>
-  <div class="solution-grid">
-    <div class="solution-card">
-      <h4>Works with Any LLM</h4>
-      <p>Claude, GPT, Gemini, Llama, Ollama, Mistral. A memory layer, not a framework.</p>
-    </div>
-    <div class="solution-card">
-      <h4>Fully Local & Private</h4>
-      <p>All data in SQLite on your machine. No telemetry, no cloud, no data collection.</p>
-    </div>
-    <div class="solution-card">
-      <h4>Cross-Tool Memory</h4>
-      <p>Sync to Claude Code, Codex CLI, and Gemini CLI. One store, every tool.</p>
-    </div>
-    <div class="solution-card">
-      <h4>Free & Open Source</h4>
-      <p>MIT licensed. No paid tiers, no subscriptions. Built for humanity.</p>
-    </div>
-  </div>
-</div>
-
 <!-- Features -->
 <div class="mm-section">
   <h2>Features</h2>
@@ -188,56 +149,28 @@ results = memory.recall("What does the user prefer?")
       <p>Find by meaning, not keywords. Ollama or local embeddings.</p>
     </div>
     <div class="feature-card">
-      <h3>Memory Categories</h3>
-      <p>Auto-categorize and route to the right scope.</p>
-    </div>
-    <div class="feature-card">
       <h3>MCP Server</h3>
       <p>Built-in for Claude, Cursor, Windsurf, Gemini.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Memory Categories</h3>
+      <p>Auto-categorize and route to the right scope.</p>
     </div>
     <div class="feature-card">
       <h3>Encrypted Storage</h3>
       <p>Encrypt at rest. Zero external deps.</p>
     </div>
     <div class="feature-card">
-      <h3>Auto-Compaction</h3>
-      <p>Transparent dedup. Like SQLite auto-vacuum.</p>
-    </div>
-    <div class="feature-card">
       <h3>Session Context</h3>
       <p>User profile, guardrails, project state in one call.</p>
-    </div>
-    <div class="feature-card">
-      <h3>Time-Based Decay</h3>
-      <p>Recent memories rank higher. Stale ones fade.</p>
-    </div>
-    <div class="feature-card">
-      <h3>Episodic Memory</h3>
-      <p>Group by session. Recall with conversation context.</p>
-    </div>
-    <div class="feature-card">
-      <h3>Pin Support</h3>
-      <p>Pin critical memories. Never decay, always top-ranked.</p>
     </div>
     <div class="feature-card">
       <h3>Privacy Guard</h3>
       <p>Auto-detect and redact secrets before storing.</p>
     </div>
     <div class="feature-card">
-      <h3>Contradiction Detection</h3>
-      <p>Catch conflicting facts. Keep, update, or skip.</p>
-    </div>
-    <div class="feature-card">
-      <h3>Retrieval Filters</h3>
-      <p>Filter by category, importance, time range, metadata.</p>
-    </div>
-    <div class="feature-card">
-      <h3>Web Dashboard</h3>
-      <p>Browse and search memories in your browser.</p>
-    </div>
-    <div class="feature-card">
-      <h3>Evaluation Suite</h3>
-      <p>Quality and adversarial tests for recall accuracy.</p>
+      <h3>Cross-Tool Sync</h3>
+      <p>Sync memories across Claude, Codex, Gemini, Cursor.</p>
     </div>
   </div>
 </div>

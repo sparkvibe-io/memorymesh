@@ -45,7 +45,7 @@ Get MemoryMesh running in under 60 seconds.
 from memorymesh import MemoryMesh
 
 # Create a memory instance (stores in SQLite, fully local)
-memory = MemoryMesh(embedding="none")  # or "ollama", "local", "openai"
+memory = MemoryMesh()
 
 # Store memories
 memory.remember("User is a senior Python developer")
@@ -161,6 +161,24 @@ This auto-detects your installed AI tools and configures all of them.
 
     Then add `"env": { "MEMORYMESH_EMBEDDING": "ollama" }` to your MCP config. See [full Ollama setup](configuration.md#using-ollama).
 
+## Next Steps
+
+- [Configuration](configuration.md) -- Embedding providers, Ollama setup, encryption, tuning
+- [MCP Server](mcp-server.md) -- Full MCP setup guide for AI assistants
+- [API Reference](api.md) -- Complete Python API documentation
+- [CLI Reference](cli.md) -- Terminal commands for managing memories
+
+## Level Up: Semantic Search with Ollama
+
+The default installation uses keyword matching. For dramatically better recall, add Ollama for semantic search -- `recall("testing")` finds memories about "pytest", "CI pipeline", and "unit tests":
+
+```bash
+brew install ollama          # macOS (or curl install on Linux)
+ollama pull nomic-embed-text # one-time ~274MB download
+```
+
+Then pass `embedding="ollama"` to `MemoryMesh()` or set `MEMORYMESH_EMBEDDING=ollama` in your MCP config.
+
 ## Core Concepts
 
 ### Understanding Scopes
@@ -239,10 +257,3 @@ When you call `recall()`, MemoryMesh ranks results using four signals:
 | Frequency | 10% | Frequently accessed memories score higher |
 
 Memories also decay over time, just like human memory. Important, frequently-used memories persist; stale, low-importance ones fade naturally.
-
-## Next Steps
-
-- [Configuration](configuration.md) -- Embedding providers, Ollama setup, encryption, tuning
-- [MCP Server](mcp-server.md) -- Full MCP setup guide for AI assistants
-- [API Reference](api.md) -- Complete Python API documentation
-- [CLI Reference](cli.md) -- Terminal commands for managing memories

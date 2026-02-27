@@ -10,6 +10,7 @@ import contextlib
 import json
 import math
 import os
+import re
 import sqlite3
 import struct
 import threading
@@ -259,6 +260,10 @@ class MemoryStore:
 
         conn = self._get_connection()
         self._schema_version = ensure_schema(conn)
+
+        # Set restrictive permissions on the database file.
+        with contextlib.suppress(OSError):
+            os.chmod(self._path, 0o600)
 
     @property
     def schema_version(self) -> int:
@@ -533,9 +538,13 @@ class MemoryStore:
 
         if metadata_filter:
             for key, value in metadata_filter.items():
-                # Sanitize the key to prevent SQL injection via json path.
-                safe_key = key.replace("'", "").replace('"', "").replace("\\", "")
-                conditions.append(f"json_extract(metadata_json, '$.{safe_key}') = ?")
+                # Strict allowlist: only valid identifier characters allowed.
+                if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", key):
+                    raise ValueError(
+                        f"Invalid metadata_filter key: {key!r}. "
+                        "Keys must be valid identifiers (letters, digits, underscores)."
+                    )
+                conditions.append(f"json_extract(metadata_json, '$.{key}') = ?")
                 if isinstance(value, str):
                     params.append(value)
                 else:

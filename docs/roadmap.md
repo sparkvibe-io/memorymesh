@@ -2,51 +2,67 @@
 
 ## What MemoryMesh Is
 
-MemoryMesh is the SQLite of AI Memory -- an embeddable, zero-dependency Python library that gives any LLM application persistent, intelligent memory. It serves two audiences:
+MemoryMesh is the SQLite of AI Memory -- an embeddable, zero-dependency Python library that gives any LLM application persistent, intelligent memory.
 
-- **AI tool users** (Claude Code, Cursor, Gemini CLI) -- MemoryMesh runs as an invisible backend, powering `.md` memory files with ranked, structured data. You install it once and forget it exists.
-- **Developers building LLM apps** -- MemoryMesh is an embeddable library. Three lines of Python give your agents long-term memory backed by SQLite. No servers, no infrastructure, no vendor lock-in.
+**Primary audience:** AI tool users (Claude Code, Cursor, Gemini CLI, Codex CLI). Install once, your AI remembers everything.
+
+**Secondary audience:** Developers building LLM apps. Three lines of Python. No servers, no infrastructure, no vendor lock-in.
 
 ---
 
-## What's Next: v4.0 -- Invisible Memory
+## v3.2 -- Launch Ready (Q1 2026)
+
+Security hardening, test coverage, and distribution. Feature freeze until real user feedback is collected.
+
+- Security fixes (metadata filter validation, file permissions, encryption documentation)
+- MCP server test coverage
+- README and messaging rewrite (pain-first narrative, demo GIF, separate MCP quick start)
+- Documentation polish (slimmer getting-started, MCP verification step)
+- Show HN launch, Reddit, awesome list submissions, MCP directory listing
+
+---
+
+## v4.0 -- Invisible Memory (Q2-Q3 2026)
 
 The AI shouldn't need to "use" MemoryMesh. It should just work.
 
 ### Smart Sync
-
 Export the top-N most relevant memories to `.md` files, ranked by importance and recency -- not a full dump. Directly reduces token cost by injecting only what matters into every session.
 
-- Expose ranking weights as user-configurable: `score = w1·recency + w2·importance + w3·similarity`
-- Graceful degradation: if Smart Sync is disabled or fails, fall back to current full-dump behavior
+- User-configurable ranking weights
+- Graceful degradation to current full-dump behavior
 
 ### Auto-Remember Hooks
-
 PostToolUse and Stop hooks that capture decisions, patterns, and key facts without requiring the AI to call `remember()`. Zero-instruction persistence -- memory happens as a side effect of working.
 
-- Noise filtering is critical: heuristic gate (length threshold, keyword density, dedup against recent memories) before storing
+- Noise filtering gate before storing (length, keyword density, dedup)
+- Privacy guard runs before capture (hooks may see API keys in tool output)
 
 ### Lean MCP
-
-Consolidate the current 10 MCP tools into fewer, more powerful operations. Less schema overhead per session, lower cognitive load for the AI, same capabilities.
+Consolidate MCP tools where real usage data supports it. Less schema overhead per session, same capabilities.
 
 ### Task-Aware Injection
+`session_start` reads the user's first message and generates targeted context instead of a generic profile dump.
 
-`session_start` reads the user's first message and generates targeted context instead of a generic profile dump. The AI gets exactly the memories relevant to what it's about to do.
+### Scaling & Architecture
+- Fix full-table embedding scan (SQL-level pre-filter before loading vectors)
+- SQLite FTS5 for keyword search when embeddings are disabled
+- Split MCP server monolith into protocol + tools modules
+- Custom exception hierarchy
 
 ### Measured Overhead
-
-Instrument real token impact per session. Track how many tokens MemoryMesh adds vs. saves. Self-optimize. Prove the value with numbers, not claims.
+Instrument real token impact per session. Prove the value with data, not claims.
 
 ---
 
-## v5.0 Vision -- Anticipatory Intelligence
+## v5.0 -- Adaptive Memory (2027)
 
-- **Question learning** -- Store questions users ask, proactively surface answers in future sessions
-- **Behavioral tracking** -- Learn coding styles, interaction patterns, and preferred approaches across sessions
-- **Proactive anticipation** -- Use accumulated data to anticipate needs before the user asks. Start with lightweight heuristics (e.g., "user asked about X three times → surface on next session") using existing access_count data before full LLM-based anticipation
-- **Multi-device sync** -- Same memory available on every machine. Phase 1: document Syncthing/rsync with `.memorymesh/` (zero code). Phase 2: optional encrypted cloud sync as opt-in
-- **Cross-session continuity** -- Understand narrative arcs that flat files cannot represent
+Lightweight heuristics first. LLM-based anticipation deferred.
+
+- **Question frequency tracking** -- Surface answers proactively when a topic recurs
+- **Behavioral patterns** -- Learn coding styles and preferred approaches from access data
+- **Multi-device sync** -- Document Syncthing/rsync with `.memorymesh/` (zero code)
+- **Cross-session linking** -- Connect related sessions into chains
 
 ---
 

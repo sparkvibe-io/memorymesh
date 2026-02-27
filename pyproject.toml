@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "memorymesh"
-version = "3.1.0"
+version = "4.0.0"
 description = "The SQLite of AI Memory - an embeddable, zero-dependency AI memory library for any LLM application"
 readme = "README.md"
 license = "MIT"
@@ -23,7 +23,7 @@ keywords = [
     "rag",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",

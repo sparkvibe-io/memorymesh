@@ -33,19 +33,16 @@ import os
 import sys
 from typing import Any
 
+from memorymesh import __version__
+
 from .core import MemoryMesh
 from .memory import GLOBAL_SCOPE, PROJECT_SCOPE
 from .store import detect_project_root
 
 # ---------------------------------------------------------------------------
-# Logging -- all output goes to stderr so stdout stays clean for JSON-RPC
+# Logging
 # ---------------------------------------------------------------------------
 
-logging.basicConfig(
-    level=logging.DEBUG if os.environ.get("MEMORYMESH_DEBUG") else logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    stream=sys.stderr,
-)
 logger = logging.getLogger("memorymesh.mcp_server")
 
 # ---------------------------------------------------------------------------
@@ -57,7 +54,7 @@ MCP_PROTOCOL_VERSION = "2024-11-05"
 
 SERVER_INFO = {
     "name": "memorymesh",
-    "version": "3.0.0",
+    "version": __version__,
 }
 
 # ---------------------------------------------------------------------------
@@ -474,10 +471,15 @@ class MemoryMeshMCPServer:
             embedding,
             project_root,
         )
+        # Read optional relevance weights from environment.
+        from .relevance import RelevanceWeights
+
+        weights = RelevanceWeights.from_env()
         return MemoryMesh(
             path=path,
             global_path=global_path,
             embedding=embedding,
+            relevance_weights=weights,
             **kwargs,
         )
 
@@ -1400,6 +1402,11 @@ def main() -> None:
     This is the entry point used by the ``memorymesh-mcp`` console script
     and by ``python -m memorymesh.mcp_server``.
     """
+    logging.basicConfig(
+        level=logging.DEBUG if os.environ.get("MEMORYMESH_DEBUG") else logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        stream=sys.stderr,
+    )
     logger.info("Starting MemoryMesh MCP server...")
     logger.info(
         "Config: MEMORYMESH_PATH=%r  MEMORYMESH_EMBEDDING=%r",

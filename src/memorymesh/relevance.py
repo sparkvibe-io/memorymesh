@@ -8,6 +8,7 @@ memories surface during recall.
 from __future__ import annotations
 
 import math
+import os
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -40,6 +41,27 @@ class RelevanceWeights:
     def total(self) -> float:
         """Return the sum of all weights."""
         return self.semantic + self.recency + self.importance + self.frequency
+
+    @classmethod
+    def from_env(cls) -> RelevanceWeights:
+        """Create weights from ``MEMORYMESH_WEIGHT_*`` environment variables.
+
+        Reads the following environment variables (all optional):
+
+        - ``MEMORYMESH_WEIGHT_SEMANTIC`` (default 0.5)
+        - ``MEMORYMESH_WEIGHT_RECENCY`` (default 0.2)
+        - ``MEMORYMESH_WEIGHT_IMPORTANCE`` (default 0.2)
+        - ``MEMORYMESH_WEIGHT_FREQUENCY`` (default 0.1)
+
+        Returns:
+            A :class:`RelevanceWeights` instance.
+        """
+        return cls(
+            semantic=float(os.environ.get("MEMORYMESH_WEIGHT_SEMANTIC", 0.5)),
+            recency=float(os.environ.get("MEMORYMESH_WEIGHT_RECENCY", 0.2)),
+            importance=float(os.environ.get("MEMORYMESH_WEIGHT_IMPORTANCE", 0.2)),
+            frequency=float(os.environ.get("MEMORYMESH_WEIGHT_FREQUENCY", 0.1)),
+        )
 
 
 class RelevanceEngine:

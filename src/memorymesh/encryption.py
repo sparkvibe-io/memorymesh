@@ -416,6 +416,86 @@ class EncryptedMemoryStore:
         mems = self._store.get_by_session(session_id, limit=limit)
         return [self._decrypt_memory(m) for m in mems]  # type: ignore[misc]
 
+    def search_filtered(
+        self,
+        category: str | None = None,
+        min_importance: float | None = None,
+        time_range: tuple[str, str] | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+        limit: int = 10_000,
+    ) -> list[Memory]:
+        """Search with SQL-level filters and decrypt results.
+
+        .. note::
+            Metadata filtering operates on the *encrypted* metadata
+            stored in the database.  Filters on custom metadata keys will
+            not match encrypted content.  Category and importance filters
+            work normally because those fields are stored in plaintext.
+
+        Args:
+            category: Filter by category in metadata.
+            min_importance: Minimum importance threshold.
+            time_range: Tuple of (start_iso, end_iso) for created_at range.
+            metadata_filter: Dict of key-value pairs to match in metadata JSON.
+            limit: Maximum results.
+
+        Returns:
+            Filtered list of decrypted :class:`Memory` objects.
+        """
+        mems = self._store.search_filtered(
+            category=category,
+            min_importance=min_importance,
+            time_range=time_range,
+            metadata_filter=metadata_filter,
+            limit=limit,
+        )
+        return [self._decrypt_memory(m) for m in mems]  # type: ignore[misc]
+
+    def update_fields(
+        self,
+        memory_id: str,
+        text: str | None = None,
+        importance: float | None = None,
+        decay_rate: float | None = None,
+        metadata: dict[str, Any] | None = None,
+        embedding: list[float] | None = None,
+    ) -> bool:
+        """Update fields with encryption for sensitive data.
+
+        If *text* is provided, it is encrypted before storing.  If
+        *metadata* is provided, it is serialized to JSON, encrypted, and
+        wrapped in ``{"_encrypted": ...}``.  Non-sensitive fields
+        (importance, decay_rate, embedding) are delegated directly.
+
+        Args:
+            memory_id: The unique identifier of the memory to update.
+            text: New text content (will be encrypted), or ``None``.
+            importance: New importance score, or ``None``.
+            decay_rate: New decay rate, or ``None``.
+            metadata: New metadata dict (will be encrypted), or ``None``.
+            embedding: New embedding vector, or ``None``.
+
+        Returns:
+            ``True`` if the row was updated, ``False`` if not found.
+        """
+        encrypted_text = encrypt_field(text, self._key) if text is not None else None
+        encrypted_meta = None
+        if metadata is not None:
+            encrypted_meta = {
+                "_encrypted": encrypt_field(
+                    json.dumps(metadata, ensure_ascii=False), self._key
+                )
+            }
+
+        return self._store.update_fields(
+            memory_id=memory_id,
+            text=encrypted_text,
+            importance=importance,
+            decay_rate=decay_rate,
+            metadata=encrypted_meta,
+            embedding=embedding,
+        )
+
     # -- Delegate non-field-reading operations ----------------------------
 
     def delete(self, memory_id: str) -> bool:
