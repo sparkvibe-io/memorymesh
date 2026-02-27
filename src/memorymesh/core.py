@@ -350,7 +350,7 @@ class MemoryMesh:
         min_importance: float | None = None,
         time_range: tuple[str, str] | None = None,
         metadata_filter: dict[str, Any] | None = None,
-    ) -> list[Memory]:
+    ) -> builtins.list[Memory]:
         """Recall the most relevant memories for a query.
 
         Uses vector similarity (when embeddings are available) combined
@@ -948,7 +948,7 @@ class MemoryMesh:
         top_n: int = 20,
         weights: RelevanceWeights | None = None,
         scope: str | None = None,
-    ) -> list[Memory]:
+    ) -> builtins.list[Memory]:
         """Return the top-N most relevant memories ranked for sync.
 
         This method is the foundation for ``.md`` export -- callers (sync
