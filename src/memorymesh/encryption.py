@@ -482,9 +482,7 @@ class EncryptedMemoryStore:
         encrypted_meta = None
         if metadata is not None:
             encrypted_meta = {
-                "_encrypted": encrypt_field(
-                    json.dumps(metadata, ensure_ascii=False), self._key
-                )
+                "_encrypted": encrypt_field(json.dumps(metadata, ensure_ascii=False), self._key)
             }
 
         return self._store.update_fields(
