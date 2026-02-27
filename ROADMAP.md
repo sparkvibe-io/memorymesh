@@ -65,17 +65,17 @@ A 7-agent product review (architect, security, developer, designer, marketing, f
 
 ### Quick Code Fixes
 
-- [ ] **Move `logging.basicConfig()`** from module level (`mcp_server.py:44-48`) to inside `main()`. Currently overrides application logging at import time.
-- [ ] **Update Development Status classifier** -- `pyproject.toml:25` says `3 - Alpha` but project is v3.1.0. Should be `4 - Beta`.
+- [x] **Move `logging.basicConfig()`** from module level to inside `main()`. *(shipped in v4.0.0)*
+- [x] **Update Development Status classifier** -- now `4 - Beta`. *(shipped in v4.0.0)*
 - [ ] **Add `--version` flag** to CLI root command.
 
 ---
 
-## v4.0 -- Invisible Memory (After Traction)
+## v4.0 -- Invisible Memory (Shipped v4.0.1)
 
-**Goal:** Make MemoryMesh truly invisible. AI shouldn't need to "use" it -- it should just work. Only begin after v3.2 launch has produced real user feedback.
+**Goal:** Make MemoryMesh truly invisible. AI shouldn't need to "use" it -- it should just work.
 
-**Prerequisite:** 100+ GitHub stars and feedback from 10+ real users to validate which v4.0 features matter most.
+**Status:** Shipped as v4.0.0 (core features) and v4.0.1 (mkdocs pin). Available on [PyPI](https://pypi.org/project/memorymesh/4.0.1/) and [GitHub](https://github.com/sparkvibe-io/memorymesh/releases/tag/v4.0.1).
 
 ### Smart Sync
 
@@ -127,7 +127,7 @@ Instrument real token impact per session. Track what MemoryMesh adds vs. saves. 
 
 **Renamed from "Anticipatory Intelligence."** The review consensus: ship lightweight heuristics first, defer LLM-based anticipation. Do not overpromise.
 
-**Prerequisite:** 1,000+ GitHub stars, active community, proven v4.0 adoption.
+**Prerequisite:** Active community and proven v4.0 adoption.
 
 ### Adaptive Recall (Heuristic-First)
 
@@ -178,5 +178,6 @@ Instrument real token impact per session. Track what MemoryMesh adds vs. saves. 
 | **v2.0** | Personality engine: 9 memory categories, auto-categorization, session_start, structured sync |
 | **v3.0** | Intelligent memory: pin support, privacy guard, contradiction detection, retrieval filters, web dashboard |
 | **v3.1** | Setup & diagnostics: improved onboarding, health checks, runtime reconfiguration |
+| **v4.0** | Invisible Memory: Smart Sync, configurable weights, EncryptedStore completeness, security hardening |
 
 Full version history: [archive/ROADMAP-v3.md](archive/ROADMAP-v3.md)

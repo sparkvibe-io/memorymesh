@@ -22,9 +22,9 @@ Security hardening, test coverage, and distribution. Feature freeze until real u
 
 ---
 
-## v4.0 -- Invisible Memory (Q2-Q3 2026)
+## v4.0 -- Invisible Memory (Shipped v4.0.1)
 
-The AI shouldn't need to "use" MemoryMesh. It should just work.
+The AI shouldn't need to "use" MemoryMesh. It should just work. **Status:** shipped on [PyPI](https://pypi.org/project/memorymesh/4.0.1/) and [GitHub](https://github.com/sparkvibe-io/memorymesh/releases/tag/v4.0.1).
 
 ### Smart Sync
 Export the top-N most relevant memories to `.md` files, ranked by importance and recency -- not a full dump. Directly reduces token cost by injecting only what matters into every session.
@@ -74,3 +74,4 @@ Lightweight heuristics first. LLM-based anticipation deferred.
 | **v2.0** | Personality engine: 9 memory categories, auto-categorization, session_start, structured sync |
 | **v3.0** | Intelligent memory: pin support, privacy guard, contradiction detection, retrieval filters, web dashboard |
 | **v3.1** | Setup & diagnostics: improved onboarding, health checks, runtime reconfiguration |
+| **v4.0** | Invisible Memory: Smart Sync, configurable weights, EncryptedStore completeness, security hardening |
