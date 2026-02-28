@@ -35,6 +35,9 @@ jobs:
       - name: Build site
         run: mkdocs build --strict
 
+      - name: Copy .well-known for MCP server card
+        run: cp -r docs/.well-known site/.well-known
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

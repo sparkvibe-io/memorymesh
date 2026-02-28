@@ -1,0 +1,133 @@
+{
+  "serverInfo": {
+    "name": "memorymesh",
+    "version": "4.1.0"
+  },
+  "tools": [
+    {
+      "name": "remember",
+      "description": "Store a new memory in MemoryMesh. Use this to save facts, preferences, decisions, or any information that should persist across conversations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {"type": "string", "description": "The text content to remember."},
+          "category": {"type": "string", "enum": ["preference", "guardrail", "mistake", "personality", "question", "decision", "pattern", "context", "session_summary"]},
+          "importance": {"type": "number", "minimum": 0, "maximum": 1},
+          "scope": {"type": "string", "enum": ["project", "global"]},
+          "auto_categorize": {"type": "boolean"},
+          "on_conflict": {"type": "string", "enum": ["keep_both", "update", "skip"]},
+          "pin": {"type": "boolean"},
+          "redact_secrets": {"type": "boolean"},
+          "metadata": {"type": "object"}
+        },
+        "required": ["text"]
+      }
+    },
+    {
+      "name": "recall",
+      "description": "Recall relevant memories from MemoryMesh using semantic similarity and keyword matching.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string", "description": "Natural-language query describing what to recall."},
+          "k": {"type": "integer", "minimum": 1, "maximum": 100},
+          "scope": {"type": "string", "enum": ["project", "global"]},
+          "category": {"type": "string"},
+          "min_importance": {"type": "number", "minimum": 0, "maximum": 1}
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "forget",
+      "description": "Permanently delete a specific memory by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memory_id": {"type": "string", "description": "The unique identifier of the memory to delete."}
+        },
+        "required": ["memory_id"]
+      }
+    },
+    {
+      "name": "forget_all",
+      "description": "Forget ALL stored memories in the specified scope. Destructive operation. Defaults to project scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scope": {"type": "string", "enum": ["project", "global"]}
+        }
+      }
+    },
+    {
+      "name": "update_memory",
+      "description": "Update an existing memory's text, importance, scope, or metadata in place.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memory_id": {"type": "string"},
+          "text": {"type": "string"},
+          "importance": {"type": "number", "minimum": 0, "maximum": 1},
+          "scope": {"type": "string", "enum": ["project", "global"]},
+          "metadata": {"type": "object"}
+        },
+        "required": ["memory_id"]
+      }
+    },
+    {
+      "name": "memory_stats",
+      "description": "Get statistics about stored memories: total count, oldest and newest timestamps.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scope": {"type": "string", "enum": ["project", "global"]}
+        }
+      }
+    },
+    {
+      "name": "session_start",
+      "description": "Retrieve structured context for the start of a new AI session. Returns user profile, guardrails, common mistakes, and project context.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_context": {"type": "string", "description": "Brief description of what the user is working on."}
+        }
+      }
+    },
+    {
+      "name": "review_memories",
+      "description": "Audit memories for quality issues (scope mismatches, verbosity, staleness, duplicates). Returns issues with suggestions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scope": {"type": "string", "enum": ["project", "global"]}
+        }
+      }
+    },
+    {
+      "name": "status",
+      "description": "Get MemoryMesh health status: project store, global store, embedding provider, and version.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "configure_project",
+      "description": "Set the project root at runtime without restarting the server.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "Absolute path to the project root directory."}
+        },
+        "required": ["path"]
+      }
+    }
+  ],
+  "prompts": [
+    {
+      "name": "memory-context",
+      "description": "Get formatted memory context for the current session."
+    }
+  ]
+}
