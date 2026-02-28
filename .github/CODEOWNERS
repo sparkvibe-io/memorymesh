@@ -1,0 +1,12 @@
+# Default owner for everything in the repo
+* @sparkvibe-io
+
+# Core library
+src/memorymesh/core.py @sparkvibe-io
+src/memorymesh/store.py @sparkvibe-io
+src/memorymesh/mcp_server.py @sparkvibe-io
+
+# Security-sensitive files
+src/memorymesh/encryption.py @sparkvibe-io
+src/memorymesh/privacy.py @sparkvibe-io
+SECURITY.md @sparkvibe-io

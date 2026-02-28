@@ -1098,16 +1098,27 @@ class MemoryMesh:
         query: str,
         query_embedding: builtins.list[float],
         store: MemoryStore,
+        min_importance: float | None = None,
+        category: str | None = None,
     ) -> builtins.list[Memory]:
         """Gather candidate memories from a single store.
 
         Combines vector search (when embeddings are available) with
         keyword fallback, mirroring the original ``recall`` logic.
 
+        When *min_importance* or *category* are provided, the store
+        pre-filters rows at the SQL level via
+        :meth:`MemoryStore.get_candidates_with_embeddings`, avoiding
+        the full-table scan that becomes a bottleneck at 5K+ memories.
+
         Args:
             query: The natural-language query.
             query_embedding: Pre-computed query embedding (may be empty).
             store: The :class:`MemoryStore` to search.
+            min_importance: When set, only candidates with importance at
+                or above this value are loaded.
+            category: When set, only candidates whose metadata category
+                matches this value are loaded.
 
         Returns:
             A deduplicated list of candidate :class:`Memory` objects.
@@ -1115,7 +1126,11 @@ class MemoryMesh:
         if not query_embedding:
             return store.search_by_text(query, limit=20)
 
-        candidates = store.get_all_with_embeddings()
+        candidates = store.get_candidates_with_embeddings(
+            limit=1000,
+            min_importance=min_importance,
+            category=category,
+        )
         keyword_hits = store.search_by_text(query, limit=10)
         seen_ids = {m.id for m in candidates}
         for hit in keyword_hits:

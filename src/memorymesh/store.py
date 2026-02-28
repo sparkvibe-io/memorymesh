@@ -440,6 +440,62 @@ class MemoryStore:
             rows = cur.fetchall()
         return [self._row_to_memory(r) for r in rows]
 
+    def get_candidates_with_embeddings(
+        self,
+        limit: int = 1000,
+        min_importance: float | None = None,
+        category: str | None = None,
+    ) -> list[Memory]:
+        """Return embedding-bearing memories with optional SQL pre-filtering.
+
+        Unlike :meth:`get_all_with_embeddings`, this method applies
+        ``WHERE`` clauses for *min_importance* and *category* **before**
+        loading rows, and enforces a tighter default ``LIMIT``.  This
+        avoids the full-table scan that becomes a bottleneck at 5K+
+        memories.
+
+        Results are ordered by ``importance DESC, updated_at DESC`` so
+        the most relevant candidates are returned first when the limit
+        truncates the result set.
+
+        Args:
+            limit: Maximum number of rows to return.  Defaults to 1,000.
+            min_importance: When set, only memories with ``importance >=``
+                this value are returned.  ``None`` (default) skips the
+                filter.
+            category: When set, only memories whose metadata contains a
+                ``"category"`` key matching this value are returned.
+                ``None`` (default) skips the filter.
+
+        Returns:
+            A list of :class:`Memory` objects that have embeddings and
+            satisfy the given filters.
+        """
+        conditions: list[str] = ["embedding_blob IS NOT NULL"]
+        params: list[Any] = []
+
+        if min_importance is not None:
+            conditions.append("importance >= ?")
+            params.append(min_importance)
+
+        if category is not None:
+            conditions.append("json_extract(metadata_json, '$.category') = ?")
+            params.append(category)
+
+        where_clause = " AND ".join(conditions)
+        sql = f"""
+            SELECT * FROM memories
+            WHERE {where_clause}
+            ORDER BY importance DESC, updated_at DESC
+            LIMIT ?
+        """
+        params.append(limit)
+
+        with self._cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+        return [self._row_to_memory(r) for r in rows]
+
     def get_by_session(self, session_id: str, limit: int = 100) -> list[Memory]:
         """Retrieve all memories belonging to a specific session.
 

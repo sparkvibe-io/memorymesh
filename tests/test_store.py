@@ -171,3 +171,141 @@ def test_thread_safety(tmp_path):
     assert sum(results) == num_threads * memories_per_thread
     assert store.count() == num_threads * memories_per_thread
     store.close()
+
+
+# ------------------------------------------------------------------
+# get_candidates_with_embeddings
+# ------------------------------------------------------------------
+
+
+def _make_memory_with_embedding(
+    text: str = "test memory",
+    embedding: list[float] | None = None,
+    importance: float = 0.5,
+    metadata: dict | None = None,
+    **kwargs,
+) -> Memory:
+    """Create a Memory with an optional embedding and metadata."""
+    if metadata is None:
+        metadata = {}
+    if embedding is None:
+        embedding = [0.1, 0.2, 0.3]
+    return Memory(text=text, embedding=embedding, importance=importance, metadata=metadata, **kwargs)
+
+
+def test_get_candidates_with_embeddings_returns_only_embedded(tmp_path):
+    """Only memories with embeddings are returned."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.save(_make_memory_with_embedding("with embedding", embedding=[1.0, 2.0]))
+    store.save(_make_memory("without embedding"))  # no embedding
+
+    results = store.get_candidates_with_embeddings()
+    assert len(results) == 1
+    assert results[0].text == "with embedding"
+    store.close()
+
+
+def test_get_candidates_with_embeddings_respects_limit(tmp_path):
+    """The limit parameter caps the number of returned rows."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    for i in range(10):
+        store.save(_make_memory_with_embedding(f"Memory {i}"))
+
+    results = store.get_candidates_with_embeddings(limit=3)
+    assert len(results) == 3
+    store.close()
+
+
+def test_get_candidates_with_embeddings_filters_min_importance(tmp_path):
+    """Only memories at or above min_importance are returned."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.save(_make_memory_with_embedding("low", importance=0.2))
+    store.save(_make_memory_with_embedding("medium", importance=0.5))
+    store.save(_make_memory_with_embedding("high", importance=0.9))
+
+    results = store.get_candidates_with_embeddings(min_importance=0.5)
+    assert len(results) == 2
+    texts = {m.text for m in results}
+    assert texts == {"medium", "high"}
+    store.close()
+
+
+def test_get_candidates_with_embeddings_filters_category(tmp_path):
+    """Only memories matching the given category are returned."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.save(_make_memory_with_embedding("decision 1", metadata={"category": "decision"}))
+    store.save(_make_memory_with_embedding("preference 1", metadata={"category": "preference"}))
+    store.save(_make_memory_with_embedding("decision 2", metadata={"category": "decision"}))
+
+    results = store.get_candidates_with_embeddings(category="decision")
+    assert len(results) == 2
+    for m in results:
+        assert m.metadata["category"] == "decision"
+    store.close()
+
+
+def test_get_candidates_with_embeddings_combines_filters(tmp_path):
+    """min_importance and category filters are applied together."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.save(
+        _make_memory_with_embedding("low decision", importance=0.2, metadata={"category": "decision"})
+    )
+    store.save(
+        _make_memory_with_embedding(
+            "high decision", importance=0.8, metadata={"category": "decision"}
+        )
+    )
+    store.save(
+        _make_memory_with_embedding(
+            "high preference", importance=0.8, metadata={"category": "preference"}
+        )
+    )
+
+    results = store.get_candidates_with_embeddings(min_importance=0.5, category="decision")
+    assert len(results) == 1
+    assert results[0].text == "high decision"
+    store.close()
+
+
+def test_get_candidates_with_embeddings_no_filters(tmp_path):
+    """When no filters are set, all embedded memories are returned (up to limit)."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    for i in range(5):
+        store.save(_make_memory_with_embedding(f"Memory {i}", importance=float(i) / 10))
+
+    results = store.get_candidates_with_embeddings()
+    assert len(results) == 5
+    store.close()
+
+
+def test_get_candidates_with_embeddings_ordered_by_importance(tmp_path):
+    """Results are ordered by importance DESC, then updated_at DESC."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.save(_make_memory_with_embedding("low", importance=0.1))
+    store.save(_make_memory_with_embedding("high", importance=0.9))
+    store.save(_make_memory_with_embedding("mid", importance=0.5))
+
+    results = store.get_candidates_with_embeddings()
+    importances = [m.importance for m in results]
+    assert importances == sorted(importances, reverse=True)
+    store.close()
+
+
+def test_get_candidates_with_embeddings_empty_store(tmp_path):
+    """An empty store returns an empty list."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    results = store.get_candidates_with_embeddings()
+    assert results == []
+    store.close()
+
+
+def test_get_all_with_embeddings_still_works(tmp_path):
+    """get_all_with_embeddings() remains functional (backward compat)."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.save(_make_memory_with_embedding("embedded"))
+    store.save(_make_memory("not embedded"))
+
+    results = store.get_all_with_embeddings()
+    assert len(results) == 1
+    assert results[0].text == "embedded"
+    store.close()

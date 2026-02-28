@@ -1,5 +1,7 @@
 # MemoryMesh - The SQLite of AI Memory
 
+<!-- mcp-name: io.github.sparkvibe-io/memorymesh -->
+
 <!-- Badges -->
 [![PyPI version](https://img.shields.io/pypi/v/memorymesh.svg)](https://pypi.org/project/memorymesh/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)

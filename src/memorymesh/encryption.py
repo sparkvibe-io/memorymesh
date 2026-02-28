@@ -403,6 +403,40 @@ class EncryptedMemoryStore:
         mems = self._store.get_all_with_embeddings(limit=limit)
         return [self._decrypt_memory(m) for m in mems]  # type: ignore[misc]
 
+    def get_candidates_with_embeddings(
+        self,
+        limit: int = 1000,
+        min_importance: float | None = None,
+        category: str | None = None,
+    ) -> list[Memory]:
+        """Return decrypted, pre-filtered memories with embeddings.
+
+        Delegates to the underlying store's
+        :meth:`~MemoryStore.get_candidates_with_embeddings` and decrypts
+        each result.
+
+        .. note::
+            Category filtering operates on the *encrypted* metadata in the
+            database.  When encryption is enabled, category filters may not
+            match because the metadata JSON is encrypted.  Importance
+            filtering works normally because ``importance`` is stored in
+            plaintext.
+
+        Args:
+            limit: Maximum number of rows to return.
+            min_importance: Minimum importance threshold, or ``None``.
+            category: Category value to match, or ``None``.
+
+        Returns:
+            A list of decrypted :class:`Memory` objects with embeddings.
+        """
+        mems = self._store.get_candidates_with_embeddings(
+            limit=limit,
+            min_importance=min_importance,
+            category=category,
+        )
+        return [self._decrypt_memory(m) for m in mems]  # type: ignore[misc]
+
     def get_by_session(self, session_id: str, limit: int = 100) -> list[Memory]:
         """Retrieve and decrypt all memories in a session.
 
