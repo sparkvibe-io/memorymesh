@@ -1,0 +1,9 @@
+[project]
+name = "memorymesh-smithery"
+version = "4.1.0"
+description = "MemoryMesh HTTP server for Smithery deployment"
+requires-python = ">=3.10"
+dependencies = [
+    "memorymesh>=4.1.0",
+    "mcp[cli]>=1.12.4",
+]

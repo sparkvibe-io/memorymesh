@@ -1,29 +1,22 @@
+runtime: "container"
+build:
+  dockerfile: "smithery/Dockerfile"
+  dockerBuildPath: "smithery"
 startCommand:
-  type: stdio
+  type: "http"
   configSchema:
-    type: object
+    type: "object"
     properties:
       projectPath:
-        type: string
+        type: "string"
         description: "Path to the project root for project-scoped memories."
       globalPath:
-        type: string
+        type: "string"
         description: "Path to the global memory database."
       embedding:
-        type: string
+        type: "string"
         enum: ["none", "local", "ollama", "openai"]
         description: "Embedding provider to use. Default: none."
     required: []
-  commandFunction:
-    |-
-    (config) => {
-      const env = {};
-      if (config.projectPath) env.MEMORYMESH_PATH = config.projectPath + '/.memorymesh/memories.db';
-      if (config.globalPath) env.MEMORYMESH_GLOBAL_PATH = config.globalPath;
-      if (config.embedding) env.MEMORYMESH_EMBEDDING = config.embedding;
-      return {
-        command: 'uvx',
-        args: ['memorymesh-mcp'],
-        env
-      };
-    }
+  exampleConfig:
+    embedding: "none"
