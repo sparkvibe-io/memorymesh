@@ -1,13 +1,16 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.sparkvibe-io/memorymesh",
-  "description": "Persistent, intelligent memory for any LLM application. Zero-dependency, local-first, cross-tool portable. The SQLite of AI Memory.",
+  "description": "Persistent, zero-dependency AI memory using SQLite. Local-first, cross-tool portable.",
   "version": "4.1.0",
   "packages": [
     {
-      "registry_type": "pypi",
+      "registryType": "pypi",
       "identifier": "memorymesh",
-      "version": "4.1.0"
+      "version": "4.1.0",
+      "transport": {
+        "type": "stdio"
+      }
     }
   ]
 }
