@@ -17,10 +17,12 @@ Environment variables:
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 import uvicorn
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
+from pydantic import Field
 from starlette.middleware.cors import CORSMiddleware
 
 from memorymesh import MemoryMesh, __version__
@@ -61,23 +63,25 @@ def _get_mesh() -> MemoryMesh:
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Remember",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=False,
+))
 def remember(
-    text: str,
-    category: Optional[str] = None,
-    importance: Optional[float] = None,
-    scope: Optional[str] = None,
-    auto_categorize: bool = False,
-    on_conflict: Optional[str] = None,
-    pin: bool = False,
-    redact_secrets: bool = False,
-    metadata: Optional[dict[str, Any]] = None,
+    text: Annotated[str, Field(description="The text content to remember.")],
+    category: Annotated[Optional[str], Field(description="Memory category. Auto-routes scope (e.g. 'preference' -> global, 'decision' -> project).")] = None,
+    importance: Annotated[Optional[float], Field(description="Importance score between 0.0 and 1.0. Higher = more prominent during recall. Default: 0.5.")] = None,
+    scope: Annotated[Optional[str], Field(description="Where to store: 'project' (default) or 'global'.")] = None,
+    auto_categorize: Annotated[bool, Field(description="If true, auto-detect category and importance from text.")] = False,
+    on_conflict: Annotated[Optional[str], Field(description="Contradiction handling: 'keep_both' (default), 'update', or 'skip'.")] = None,
+    pin: Annotated[bool, Field(description="Pin this memory. Pinned memories have max importance and never decay.")] = False,
+    redact_secrets: Annotated[bool, Field(description="If true, redact detected secrets (API keys, tokens) before storing.")] = False,
+    metadata: Annotated[Optional[dict[str, Any]], Field(description="Key-value metadata to attach to the memory.")] = None,
 ) -> str:
-    """Store a new memory in MemoryMesh.
-
-    Use this to save facts, preferences, decisions, or any information
-    that should persist across conversations.
-    """
+    """Store a new memory in MemoryMesh. Use this to save facts, preferences, decisions, or any information that should persist across conversations."""
     mesh = _get_mesh()
     mem = mesh.remember(
         text=text,
@@ -93,13 +97,19 @@ def remember(
     return f"Remembered (id={mem.id}, scope={mem.scope}): {text[:80]}"
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Recall",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+))
 def recall(
-    query: str,
-    k: int = 5,
-    scope: Optional[str] = None,
-    category: Optional[str] = None,
-    min_importance: Optional[float] = None,
+    query: Annotated[str, Field(description="Natural-language query describing what to recall.")],
+    k: Annotated[int, Field(description="Maximum number of memories to return. Default: 5.")] = 5,
+    scope: Annotated[Optional[str], Field(description="Limit search to 'project' or 'global'. Omit to search both.")] = None,
+    category: Annotated[Optional[str], Field(description="Filter by memory category.")] = None,
+    min_importance: Annotated[Optional[float], Field(description="Only return memories with importance >= this value.")] = None,
 ) -> list[dict[str, Any]]:
     """Recall relevant memories from MemoryMesh using semantic similarity and keyword matching."""
     mesh = _get_mesh()
@@ -123,31 +133,53 @@ def recall(
     ]
 
 
-@mcp.tool()
-def forget(memory_id: str) -> str:
-    """Permanently delete a specific memory by its ID."""
+@mcp.tool(annotations=ToolAnnotations(
+    title="Forget",
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=True,
+    openWorldHint=False,
+))
+def forget(
+    memory_id: Annotated[str, Field(description="The unique identifier of the memory to delete.")],
+) -> str:
+    """Permanently delete a specific memory by its ID. Searches both project and global stores."""
     mesh = _get_mesh()
     mesh.forget(memory_id)
     return f"Forgotten: {memory_id}"
 
 
-@mcp.tool()
-def forget_all(scope: str = "project") -> str:
-    """Forget ALL stored memories in the specified scope. Destructive operation."""
+@mcp.tool(annotations=ToolAnnotations(
+    title="Forget All",
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=True,
+    openWorldHint=False,
+))
+def forget_all(
+    scope: Annotated[str, Field(description="Which scope to clear: 'project' (default) or 'global'.")] = "project",
+) -> str:
+    """Forget ALL stored memories in the specified scope. This is a destructive operation."""
     mesh = _get_mesh()
     mesh.forget_all(scope=scope)
     return f"All {scope} memories forgotten."
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Update Memory",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+))
 def update_memory(
-    memory_id: str,
-    text: Optional[str] = None,
-    importance: Optional[float] = None,
-    scope: Optional[str] = None,
-    metadata: Optional[dict[str, Any]] = None,
+    memory_id: Annotated[str, Field(description="The ID of the memory to update.")],
+    text: Annotated[Optional[str], Field(description="New text content (replaces existing).")] = None,
+    importance: Annotated[Optional[float], Field(description="New importance score between 0.0 and 1.0.")] = None,
+    scope: Annotated[Optional[str], Field(description="Move memory to this scope: 'project' or 'global'.")] = None,
+    metadata: Annotated[Optional[dict[str, Any]], Field(description="New metadata key-value pairs (replaces existing).")] = None,
 ) -> str:
-    """Update an existing memory's text, importance, scope, or metadata in place."""
+    """Update an existing memory's text, importance, scope, or metadata in place. Only provided fields are changed."""
     mesh = _get_mesh()
     fields: dict[str, Any] = {}
     if text is not None:
@@ -162,25 +194,52 @@ def update_memory(
     return f"Updated: {memory_id}"
 
 
-@mcp.tool()
-def memory_stats(scope: Optional[str] = None) -> dict[str, Any]:
+@mcp.tool(annotations=ToolAnnotations(
+    title="Memory Stats",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+))
+def memory_stats(
+    scope: Annotated[Optional[str], Field(description="Limit stats to 'project' or 'global'. Omit for combined stats.")] = None,
+) -> dict[str, Any]:
     """Get statistics about stored memories: total count, oldest and newest timestamps."""
     mesh = _get_mesh()
     stats = mesh.stats(scope=scope)
     return stats
 
 
-@mcp.tool()
-def session_start(project_context: Optional[str] = None) -> dict[str, Any]:
-    """Retrieve structured context for the start of a new AI session."""
+@mcp.tool(annotations=ToolAnnotations(
+    title="Session Start",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+))
+def session_start(
+    project_context: Annotated[Optional[str], Field(description="Brief description of what the user is working on.")] = None,
+) -> dict[str, Any]:
+    """Retrieve structured context for the start of a new AI session. Returns user profile, guardrails, and project context."""
     mesh = _get_mesh()
     context = mesh.session_start(project_context=project_context)
     return context
 
 
-@mcp.tool()
-def review_memories_tool(scope: Optional[str] = None) -> dict[str, Any]:
-    """Audit memories for quality issues (scope mismatches, verbosity, staleness, duplicates)."""
+@mcp.tool(
+    name="review_memories",
+    annotations=ToolAnnotations(
+        title="Review Memories",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+def review_memories_tool(
+    scope: Annotated[Optional[str], Field(description="Limit review to 'project' or 'global'. Omit to review all.")] = None,
+) -> dict[str, Any]:
+    """Audit memories for quality issues (scope mismatches, verbosity, staleness, duplicates). Returns issues with suggestions."""
     mesh = _get_mesh()
     stores = []
     if scope != GLOBAL_SCOPE and mesh._project_store:
@@ -198,7 +257,13 @@ def review_memories_tool(scope: Optional[str] = None) -> dict[str, Any]:
     return {"issues": all_issues, "count": len(all_issues)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Status",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+))
 def status() -> dict[str, Any]:
     """Get MemoryMesh health status: project store, global store, embedding provider, and version."""
     mesh = _get_mesh()
@@ -210,9 +275,17 @@ def status() -> dict[str, Any]:
     }
 
 
-@mcp.tool()
-def configure_project(path: str) -> str:
-    """Set the project root at runtime without restarting the server."""
+@mcp.tool(annotations=ToolAnnotations(
+    title="Configure Project",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+))
+def configure_project(
+    path: Annotated[str, Field(description="Absolute path to the project root directory.")],
+) -> str:
+    """Set the project root at runtime without restarting the server. Creates the project database at <path>/.memorymesh/memories.db."""
     mesh = _get_mesh()
     db_path = os.path.join(os.path.expanduser(path), ".memorymesh", "memories.db")
     os.environ["MEMORYMESH_PATH"] = db_path

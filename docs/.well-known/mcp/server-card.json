@@ -7,18 +7,25 @@
     {
       "name": "remember",
       "description": "Store a new memory in MemoryMesh. Use this to save facts, preferences, decisions, or any information that should persist across conversations.",
+      "annotations": {
+        "title": "Remember",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
           "text": {"type": "string", "description": "The text content to remember."},
-          "category": {"type": "string", "enum": ["preference", "guardrail", "mistake", "personality", "question", "decision", "pattern", "context", "session_summary"]},
-          "importance": {"type": "number", "minimum": 0, "maximum": 1},
-          "scope": {"type": "string", "enum": ["project", "global"]},
-          "auto_categorize": {"type": "boolean"},
-          "on_conflict": {"type": "string", "enum": ["keep_both", "update", "skip"]},
-          "pin": {"type": "boolean"},
-          "redact_secrets": {"type": "boolean"},
-          "metadata": {"type": "object"}
+          "category": {"type": "string", "enum": ["preference", "guardrail", "mistake", "personality", "question", "decision", "pattern", "context", "session_summary"], "description": "Memory category. Auto-routes scope (e.g. 'preference' -> global, 'decision' -> project)."},
+          "importance": {"type": "number", "minimum": 0, "maximum": 1, "description": "Importance score between 0.0 and 1.0. Higher = more prominent during recall. Default: 0.5."},
+          "scope": {"type": "string", "enum": ["project", "global"], "description": "Where to store: 'project' (default) or 'global'."},
+          "auto_categorize": {"type": "boolean", "description": "If true, auto-detect category and importance from text."},
+          "on_conflict": {"type": "string", "enum": ["keep_both", "update", "skip"], "description": "Contradiction handling: 'keep_both' (default), 'update', or 'skip'."},
+          "pin": {"type": "boolean", "description": "Pin this memory. Pinned memories have max importance and never decay."},
+          "redact_secrets": {"type": "boolean", "description": "If true, redact detected secrets (API keys, tokens) before storing."},
+          "metadata": {"type": "object", "description": "Key-value metadata to attach to the memory.", "additionalProperties": true}
         },
         "required": ["text"]
       }
@@ -26,21 +33,35 @@
     {
       "name": "recall",
       "description": "Recall relevant memories from MemoryMesh using semantic similarity and keyword matching.",
+      "annotations": {
+        "title": "Recall",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
           "query": {"type": "string", "description": "Natural-language query describing what to recall."},
-          "k": {"type": "integer", "minimum": 1, "maximum": 100},
-          "scope": {"type": "string", "enum": ["project", "global"]},
-          "category": {"type": "string"},
-          "min_importance": {"type": "number", "minimum": 0, "maximum": 1}
+          "k": {"type": "integer", "minimum": 1, "maximum": 100, "description": "Maximum number of memories to return. Default: 5."},
+          "scope": {"type": "string", "enum": ["project", "global"], "description": "Limit search to 'project' or 'global'. Omit to search both."},
+          "category": {"type": "string", "description": "Filter by memory category."},
+          "min_importance": {"type": "number", "minimum": 0, "maximum": 1, "description": "Only return memories with importance >= this value."}
         },
         "required": ["query"]
       }
     },
     {
       "name": "forget",
-      "description": "Permanently delete a specific memory by its ID.",
+      "description": "Permanently delete a specific memory by its ID. Searches both project and global stores.",
+      "annotations": {
+        "title": "Forget",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -51,25 +72,39 @@
     },
     {
       "name": "forget_all",
-      "description": "Forget ALL stored memories in the specified scope. Destructive operation. Defaults to project scope.",
+      "description": "Forget ALL stored memories in the specified scope. This is a destructive operation. Defaults to project scope.",
+      "annotations": {
+        "title": "Forget All",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
-          "scope": {"type": "string", "enum": ["project", "global"]}
+          "scope": {"type": "string", "enum": ["project", "global"], "description": "Which scope to clear: 'project' (default) or 'global'."}
         }
       }
     },
     {
       "name": "update_memory",
-      "description": "Update an existing memory's text, importance, scope, or metadata in place.",
+      "description": "Update an existing memory's text, importance, scope, or metadata in place. Only provided fields are changed.",
+      "annotations": {
+        "title": "Update Memory",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
-          "memory_id": {"type": "string"},
-          "text": {"type": "string"},
-          "importance": {"type": "number", "minimum": 0, "maximum": 1},
-          "scope": {"type": "string", "enum": ["project", "global"]},
-          "metadata": {"type": "object"}
+          "memory_id": {"type": "string", "description": "The ID of the memory to update."},
+          "text": {"type": "string", "description": "New text content (replaces existing)."},
+          "importance": {"type": "number", "minimum": 0, "maximum": 1, "description": "New importance score between 0.0 and 1.0."},
+          "scope": {"type": "string", "enum": ["project", "global"], "description": "Move memory to this scope: 'project' or 'global'."},
+          "metadata": {"type": "object", "description": "New metadata key-value pairs (replaces existing).", "additionalProperties": true}
         },
         "required": ["memory_id"]
       }
@@ -77,16 +112,30 @@
     {
       "name": "memory_stats",
       "description": "Get statistics about stored memories: total count, oldest and newest timestamps.",
+      "annotations": {
+        "title": "Memory Stats",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
-          "scope": {"type": "string", "enum": ["project", "global"]}
+          "scope": {"type": "string", "enum": ["project", "global"], "description": "Limit stats to 'project' or 'global'. Omit for combined stats."}
         }
       }
     },
     {
       "name": "session_start",
       "description": "Retrieve structured context for the start of a new AI session. Returns user profile, guardrails, common mistakes, and project context.",
+      "annotations": {
+        "title": "Session Start",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -97,16 +146,30 @@
     {
       "name": "review_memories",
       "description": "Audit memories for quality issues (scope mismatches, verbosity, staleness, duplicates). Returns issues with suggestions.",
+      "annotations": {
+        "title": "Review Memories",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
-          "scope": {"type": "string", "enum": ["project", "global"]}
+          "scope": {"type": "string", "enum": ["project", "global"], "description": "Limit review to 'project' or 'global'. Omit to review all."}
         }
       }
     },
     {
       "name": "status",
       "description": "Get MemoryMesh health status: project store, global store, embedding provider, and version.",
+      "annotations": {
+        "title": "Status",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -114,7 +177,14 @@
     },
     {
       "name": "configure_project",
-      "description": "Set the project root at runtime without restarting the server.",
+      "description": "Set the project root at runtime without restarting the server. Creates the project database at <path>/.memorymesh/memories.db.",
+      "annotations": {
+        "title": "Configure Project",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
