@@ -32,10 +32,7 @@ from middleware import SmitheryConfigMiddleware
 # FastMCP server
 # ---------------------------------------------------------------------------
 
-mcp = FastMCP(
-    name="MemoryMesh",
-    version=__version__,
-)
+mcp = FastMCP(name="MemoryMesh")
 
 # ---------------------------------------------------------------------------
 # Shared MemoryMesh instance
