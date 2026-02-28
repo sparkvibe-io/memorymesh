@@ -190,7 +190,9 @@ def _make_memory_with_embedding(
         metadata = {}
     if embedding is None:
         embedding = [0.1, 0.2, 0.3]
-    return Memory(text=text, embedding=embedding, importance=importance, metadata=metadata, **kwargs)
+    return Memory(
+        text=text, embedding=embedding, importance=importance, metadata=metadata, **kwargs
+    )
 
 
 def test_get_candidates_with_embeddings_returns_only_embedded(tmp_path):
@@ -248,7 +250,9 @@ def test_get_candidates_with_embeddings_combines_filters(tmp_path):
     """min_importance and category filters are applied together."""
     store = MemoryStore(path=tmp_path / "test.db")
     store.save(
-        _make_memory_with_embedding("low decision", importance=0.2, metadata={"category": "decision"})
+        _make_memory_with_embedding(
+            "low decision", importance=0.2, metadata={"category": "decision"}
+        )
     )
     store.save(
         _make_memory_with_embedding(
