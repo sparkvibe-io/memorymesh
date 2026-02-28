@@ -21,7 +21,7 @@ can be created per project.  No external server is needed.
 
 from __future__ import annotations
 
-__version__ = "4.0.1"
+__version__ = "4.1.0"
 
 from .auto_importance import score_importance
 from .categories import (
