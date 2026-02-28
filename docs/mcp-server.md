@@ -12,6 +12,16 @@ memorymesh init
 
 This auto-detects your installed AI tools and configures all of them. Or set up manually below.
 
+## Try Online (No Install)
+
+Connect to the hosted MemoryMesh server via [Smithery](https://smithery.ai/servers/sparkvibe-io/memorymesh) -- no local installation needed:
+
+```bash
+npx -y @smithery/cli install @sparkvibe-io/memorymesh --client claude
+```
+
+Supports 20+ MCP clients. For production use, we recommend the local installation below.
+
 ## Setup by Tool
 
 <div markdown>

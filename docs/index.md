@@ -19,6 +19,7 @@ description: "MemoryMesh -- free, open-source AI memory library. Give any LLM pe
   <div class="hero-install">pip install memorymesh</div>
   <div class="hero-buttons">
     <a href="getting-started/" class="md-button md-button--primary">Get Started</a>
+    <a href="https://smithery.ai/servers/sparkvibe-io/memorymesh" class="md-button">Try on Smithery</a>
     <a href="https://github.com/sparkvibe-io/memorymesh" class="md-button">GitHub</a>
   </div>
 </div>
@@ -82,6 +83,14 @@ results = memory.recall("What does the user prefer?")
 </div>
 
 <div class="mm-section" style="padding-top:0" markdown>
+
+=== "Try Online (No Install)"
+
+    ```bash
+    npx -y @smithery/cli install @sparkvibe-io/memorymesh --client claude
+    ```
+
+    Or connect at [smithery.ai/servers/sparkvibe-io/memorymesh](https://smithery.ai/servers/sparkvibe-io/memorymesh). Supports 20+ MCP clients.
 
 === "Any MCP Client"
 

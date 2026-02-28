@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python Versions](https://img.shields.io/pypi/pyversions/memorymesh.svg)](https://pypi.org/project/memorymesh/)
 [![CI](https://github.com/sparkvibe-io/memorymesh/actions/workflows/ci.yml/badge.svg)](https://github.com/sparkvibe-io/memorymesh/actions/workflows/ci.yml)
+[![Smithery](https://smithery.ai/badge/@sparkvibe-io/memorymesh)](https://smithery.ai/servers/sparkvibe-io/memorymesh)
 
 **Give any LLM persistent memory in 3 lines of Python. Zero dependencies. Fully local.**
 
@@ -35,7 +36,20 @@ Like SQLite revolutionized embedded databases, MemoryMesh brings the same philos
 
 ## MCP Quick Start
 
-MemoryMesh works as an MCP server with any compatible AI tool. Install it once, then add the config to your tool of choice:
+### Option 1: Try instantly (no install)
+
+Connect to the hosted MemoryMesh server -- no local installation needed:
+
+**Via Smithery:**
+```bash
+npx -y @smithery/cli install @sparkvibe-io/memorymesh --client claude
+```
+
+Or browse and connect at [smithery.ai/servers/sparkvibe-io/memorymesh](https://smithery.ai/servers/sparkvibe-io/memorymesh). Supports 20+ MCP clients including Claude Code, Cursor, Windsurf, and Cline.
+
+### Option 2: Install locally (recommended for production)
+
+Install once, then add the config to your tool of choice:
 
 ```bash
 pip install memorymesh
@@ -202,6 +216,16 @@ See the [full roadmap](https://github.com/sparkvibe-io/memorymesh/blob/main/ROAD
 | **[Architecture](https://sparkvibe-io.github.io/memorymesh/architecture/)** | System design, dual-store pattern, and schema migrations |
 | **[FAQ](https://sparkvibe-io.github.io/memorymesh/faq/)** | Common questions answered |
 | **[Benchmarks](https://sparkvibe-io.github.io/memorymesh/benchmarks/)** | Performance numbers and how to run benchmarks |
+
+---
+
+## Available On
+
+| Platform | Link |
+|----------|------|
+| **PyPI** | [pypi.org/project/memorymesh](https://pypi.org/project/memorymesh/) |
+| **Smithery** | [smithery.ai/servers/sparkvibe-io/memorymesh](https://smithery.ai/servers/sparkvibe-io/memorymesh) |
+| **GitHub** | [github.com/sparkvibe-io/memorymesh](https://github.com/sparkvibe-io/memorymesh) |
 
 ---
 
