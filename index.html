@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
@@ -1054,6 +1054,7 @@
   <div class="hero-install">pip install memorymesh</div>
   <div class="hero-buttons">
     <a href="getting-started/" class="md-button md-button--primary">Get Started</a>
+    <a href="https://smithery.ai/servers/sparkvibe-io/memorymesh" class="md-button">Try on Smithery</a>
     <a href="https://github.com/sparkvibe-io/memorymesh" class="md-button">GitHub</a>
   </div>
 </div>
@@ -1115,17 +1116,22 @@
 </div>
 
 <div class="mm-section" style="padding-top:0">
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Any MCP Client</label><label for="__tabbed_1_2">Python</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Try Online (No Install)</label><label for="__tabbed_1_2">Any MCP Client</label><label for="__tabbed_1_3">Python</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;memorymesh-mcp&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>npx<span class="w"> </span>-y<span class="w"> </span>@smithery/cli<span class="w"> </span>install<span class="w"> </span>@sparkvibe-io/memorymesh<span class="w"> </span>--client<span class="w"> </span>claude
+</span></code></pre></div>
+<p>Or connect at <a href="https://smithery.ai/servers/sparkvibe-io/memorymesh">smithery.ai/servers/sparkvibe-io/memorymesh</a>. Supports 20+ MCP clients.</p>
+</div>
+<div class="tabbed-block">
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;memorymesh-mcp&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </span></code></pre></div>
 <p>Works with Claude Code, Gemini CLI, Codex CLI, Cursor, Windsurf, and any MCP-compatible tool.</p>
 </div>
 <div class="tabbed-block">
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">memorymesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">MemoryMesh</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">memory</span> <span class="o">=</span> <span class="n">MemoryMesh</span><span class="p">(</span><span class="n">embedding</span><span class="o">=</span><span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">memory</span><span class="o">.</span><span class="n">remember</span><span class="p">(</span><span class="s2">&quot;User prefers dark mode&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">memorymesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">MemoryMesh</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">memory</span> <span class="o">=</span> <span class="n">MemoryMesh</span><span class="p">(</span><span class="n">embedding</span><span class="o">=</span><span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">memory</span><span class="o">.</span><span class="n">remember</span><span class="p">(</span><span class="s2">&quot;User prefers dark mode&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 </div>

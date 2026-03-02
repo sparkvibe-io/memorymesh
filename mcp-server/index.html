@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
@@ -678,6 +678,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#try-online-no-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Try Online (No Install)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#setup-by-tool" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1206,6 +1217,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#try-online-no-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Try Online (No Install)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#setup-by-tool" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1365,23 +1387,17 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>memorymesh<span class="w"> </span>init
 </span></code></pre></div>
 <p>This auto-detects your installed AI tools and configures all of them. Or set up manually below.</p>
+<h2 id="try-online-no-install">Try Online (No Install)<a class="headerlink" href="#try-online-no-install" title="Permanent link">&para;</a></h2>
+<p>Connect to the hosted MemoryMesh server via <a href="https://smithery.ai/servers/sparkvibe-io/memorymesh">Smithery</a> -- no local installation needed:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>npx<span class="w"> </span>-y<span class="w"> </span>@smithery/cli<span class="w"> </span>install<span class="w"> </span>@sparkvibe-io/memorymesh<span class="w"> </span>--client<span class="w"> </span>claude
+</span></code></pre></div>
+<p>Supports 20+ MCP clients. For production use, we recommend the local installation below.</p>
 <h2 id="setup-by-tool">Setup by Tool<a class="headerlink" href="#setup-by-tool" title="Permanent link">&para;</a></h2>
 <div>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:8"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><input id="__tabbed_1_6" name="__tabbed_1" type="radio" /><input id="__tabbed_1_7" name="__tabbed_1" type="radio" /><input id="__tabbed_1_8" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Claude Code</label><label for="__tabbed_1_2">Claude Desktop</label><label for="__tabbed_1_3">Gemini CLI</label><label for="__tabbed_1_4">OpenAI Codex CLI</label><label for="__tabbed_1_5">Cursor</label><label for="__tabbed_1_6">Windsurf</label><label for="__tabbed_1_7">GitHub Copilot</label><label for="__tabbed_1_8">Other MCP Clients</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Add to <code>~/.claude/settings.json</code>:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;memorymesh-mcp&quot;</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">}</span>
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<p>Add to <code>claude_desktop_config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1392,7 +1408,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<p>Add to your Gemini CLI MCP settings (<code>~/.gemini/settings.json</code> or project-level config):</p>
+<p>Add to <code>claude_desktop_config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1403,7 +1419,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<p>Add to your Codex CLI MCP settings (<code>~/.codex/config.json</code> or project-level config):</p>
+<p>Add to your Gemini CLI MCP settings (<code>~/.gemini/settings.json</code> or project-level config):</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1414,7 +1430,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<p>Add to <code>.cursor/mcp.json</code> in your project root:</p>
+<p>Add to your Codex CLI MCP settings (<code>~/.codex/config.json</code> or project-level config):</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1425,7 +1441,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<p>Add to your Windsurf MCP settings:</p>
+<p>Add to <code>.cursor/mcp.json</code> in your project root:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1436,20 +1452,31 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
+<p>Add to your Windsurf MCP settings:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;memorymesh-mcp&quot;</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
 <p>GitHub Copilot reads <code>AGENTS.md</code>, <code>CLAUDE.md</code>, and <code>GEMINI.md</code> files. Use MemoryMesh sync to keep these files updated:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>memorymesh<span class="w"> </span>sync<span class="w"> </span>--format<span class="w"> </span>all
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>memorymesh<span class="w"> </span>sync<span class="w"> </span>--format<span class="w"> </span>all
 </span></code></pre></div>
 <p>Copilot doesn't support MCP directly, but it benefits from the synced memory files.</p>
 </div>
 <div class="tabbed-block">
 <p>Any tool that supports the MCP protocol can connect to MemoryMesh. The MCP server uses <strong>stdin/stdout JSON-RPC</strong>:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;memorymesh-mcp&quot;</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;memorymesh-mcp&quot;</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="p">}</span>
 </span></code></pre></div>
 </div>
 </div>
@@ -1504,11 +1531,11 @@
 <h3 id="enabling-semantic-search-ollama">Enabling Semantic Search (Ollama)<a class="headerlink" href="#enabling-semantic-search-ollama" title="Permanent link">&para;</a></h3>
 <p>By default, the MCP server uses keyword matching (<code>MEMORYMESH_EMBEDDING=none</code>). <strong>We strongly recommend enabling Ollama</strong> for semantic search -- it dramatically improves recall quality. With Ollama, searching for "testing" finds memories about "pytest", "unit tests", and "CI pipeline", not just exact keyword matches.</p>
 <p><strong>Step 1: Install and start Ollama</strong> (one-time setup):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># macOS</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>brew<span class="w"> </span>install<span class="w"> </span>ollama<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ollama<span class="w"> </span>pull<span class="w"> </span>nomic-embed-text
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Linux</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://ollama.com/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ollama<span class="w"> </span>pull<span class="w"> </span>nomic-embed-text
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># macOS</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>brew<span class="w"> </span>install<span class="w"> </span>ollama<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ollama<span class="w"> </span>pull<span class="w"> </span>nomic-embed-text
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Linux</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://ollama.com/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ollama<span class="w"> </span>pull<span class="w"> </span>nomic-embed-text
 </span></code></pre></div>
 <p><strong>Step 2: Update your MCP config</strong> to enable Ollama embeddings:</p>
 <div>
@@ -1516,21 +1543,6 @@
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Update <code>~/.claude/settings.json</code>:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;memorymesh-mcp&quot;</span><span class="p">,</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">      </span><span class="nt">&quot;env&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">        </span><span class="nt">&quot;MEMORYMESH_EMBEDDING&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ollama&quot;</span><span class="p">,</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">        </span><span class="nt">&quot;MEMORYMESH_OLLAMA_MODEL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;nomic-embed-text&quot;</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="p">}</span>
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<p>Update <code>claude_desktop_config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1545,7 +1557,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<p>Update your Gemini CLI MCP settings:</p>
+<p>Update <code>claude_desktop_config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1560,7 +1572,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<p>Update your Codex CLI MCP settings:</p>
+<p>Update your Gemini CLI MCP settings:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1575,7 +1587,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<p>Update <code>.cursor/mcp.json</code> or equivalent:</p>
+<p>Update your Codex CLI MCP settings:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1589,13 +1601,28 @@
 </span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="p">}</span>
 </span></code></pre></div>
 </div>
+<div class="tabbed-block">
+<p>Update <code>.cursor/mcp.json</code> or equivalent:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="p">{</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="nt">&quot;memorymesh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;memorymesh-mcp&quot;</span><span class="p">,</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">      </span><span class="nt">&quot;env&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">        </span><span class="nt">&quot;MEMORYMESH_EMBEDDING&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ollama&quot;</span><span class="p">,</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">        </span><span class="nt">&quot;MEMORYMESH_OLLAMA_MODEL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;nomic-embed-text&quot;</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="p">}</span>
+</span></code></pre></div>
+</div>
 </div>
 </div>
 </div>
 <p>Ollama runs locally -- no API keys, no cloud, no cost. See <a href="../configuration/#using-ollama">Configuration &gt; Using Ollama</a> for full setup details and troubleshooting.</p>
 <h2 id="verify-your-setup">Verify Your Setup<a class="headerlink" href="#verify-your-setup" title="Permanent link">&para;</a></h2>
 <p>After configuring the MCP server, verify it's working:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>memorymesh<span class="w"> </span>status
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>memorymesh<span class="w"> </span>status
 </span></code></pre></div>
 <p>You should see output showing:</p>
 <ul>
@@ -1608,67 +1635,51 @@
 <h2 id="teaching-your-ai-to-use-memorymesh">Teaching Your AI to Use MemoryMesh<a class="headerlink" href="#teaching-your-ai-to-use-memorymesh" title="Permanent link">&para;</a></h2>
 <p>Installing the MCP server gives your AI assistant the <em>ability</em> to use memory. But LLMs do not use tools proactively unless you tell them to. MemoryMesh works <strong>alongside</strong> your AI tool's existing memory -- it adds structured, searchable, cross-tool persistence on top of what's already there.</p>
 <p>The fastest way to set everything up is:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>memorymesh<span class="w"> </span>init
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>memorymesh<span class="w"> </span>init
 </span></code></pre></div>
 <p>This auto-detects which AI tools you have installed and adds MemoryMesh instructions to each one. You can also target a single tool:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>memorymesh<span class="w"> </span>init<span class="w"> </span>--only<span class="w"> </span>claude
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>memorymesh<span class="w"> </span>init<span class="w"> </span>--only<span class="w"> </span>codex
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>memorymesh<span class="w"> </span>init<span class="w"> </span>--only<span class="w"> </span>gemini
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>memorymesh<span class="w"> </span>init<span class="w"> </span>--only<span class="w"> </span>claude
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>memorymesh<span class="w"> </span>init<span class="w"> </span>--only<span class="w"> </span>codex
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>memorymesh<span class="w"> </span>init<span class="w"> </span>--only<span class="w"> </span>gemini
 </span></code></pre></div>
 <p>Below is what each tool needs and the exact text to add if you prefer to do it manually.</p>
 <h3 id="claude-code">Claude Code<a class="headerlink" href="#claude-code" title="Permanent link">&para;</a></h3>
 <p>Add a <code>## Memory (MemoryMesh)</code> section to your project's <code>CLAUDE.md</code>:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="gu">## Memory (MemoryMesh)</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>MemoryMesh is configured as an MCP tool in this project. It adds persistent,
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>structured, cross-tool memory on top of your existing memory system. Use it
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>alongside your default memory -- it enhances, not replaces.
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="gu">### At the start of every conversation</span>
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>Call <span class="sb">`mcp__memorymesh__recall`</span> with a summary of the user&#39;s request to load
-</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>prior context, decisions, and patterns. If <span class="sb">`session_start`</span> is available,
-</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>call it to load user profile, guardrails, and project context.
-</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>
-</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="gu">### When to `recall`</span>
-</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>
-</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="k">-</span><span class="w"> </span><span class="gs">**Start of every conversation**</span>: Check for relevant prior context.
-</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="k">-</span><span class="w"> </span><span class="gs">**Before making decisions**</span>: Check if this was decided before.
-</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="k">-</span><span class="w"> </span><span class="gs">**When debugging**</span>: Check if this problem was encountered previously.
-</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>
-</span><span id="__span-18-19"><a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a><span class="gu">### When to `remember`</span>
-</span><span id="__span-18-20"><a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a>
-</span><span id="__span-18-21"><a id="__codelineno-18-21" name="__codelineno-18-21" href="#__codelineno-18-21"></a><span class="k">-</span><span class="w"> </span><span class="gs">**When the user says &quot;remember this&quot;**</span>: Store it with a category.
-</span><span id="__span-18-22"><a id="__codelineno-18-22" name="__codelineno-18-22" href="#__codelineno-18-22"></a><span class="k">-</span><span class="w"> </span><span class="gs">**After completing a task**</span>: Store key decisions and patterns.
-</span><span id="__span-18-23"><a id="__codelineno-18-23" name="__codelineno-18-23" href="#__codelineno-18-23"></a>  Use <span class="sb">`category`</span> to classify: <span class="sb">`&quot;decision&quot;`</span>, <span class="sb">`&quot;pattern&quot;`</span>, <span class="sb">`&quot;context&quot;`</span>.
-</span><span id="__span-18-24"><a id="__codelineno-18-24" name="__codelineno-18-24" href="#__codelineno-18-24"></a><span class="k">-</span><span class="w"> </span><span class="gs">**When the user teaches you something**</span>: Use <span class="sb">`category: &quot;preference&quot;`</span>
-</span><span id="__span-18-25"><a id="__codelineno-18-25" name="__codelineno-18-25" href="#__codelineno-18-25"></a>  or <span class="sb">`category: &quot;guardrail&quot;`</span> -- these auto-route to global scope.
-</span><span id="__span-18-26"><a id="__codelineno-18-26" name="__codelineno-18-26" href="#__codelineno-18-26"></a><span class="k">-</span><span class="w"> </span><span class="gs">**After fixing a non-trivial bug**</span>: Use <span class="sb">`category: &quot;mistake&quot;`</span>.
-</span><span id="__span-18-27"><a id="__codelineno-18-27" name="__codelineno-18-27" href="#__codelineno-18-27"></a>
-</span><span id="__span-18-28"><a id="__codelineno-18-28" name="__codelineno-18-28" href="#__codelineno-18-28"></a><span class="gu">### Scope guidance</span>
-</span><span id="__span-18-29"><a id="__codelineno-18-29" name="__codelineno-18-29" href="#__codelineno-18-29"></a>
-</span><span id="__span-18-30"><a id="__codelineno-18-30" name="__codelineno-18-30" href="#__codelineno-18-30"></a>Categories auto-route scope. If not using categories:
-</span><span id="__span-18-31"><a id="__codelineno-18-31" name="__codelineno-18-31" href="#__codelineno-18-31"></a><span class="k">-</span><span class="w"> </span>Use <span class="sb">`scope: &quot;project&quot;`</span> for project-specific decisions.
-</span><span id="__span-18-32"><a id="__codelineno-18-32" name="__codelineno-18-32" href="#__codelineno-18-32"></a><span class="k">-</span><span class="w"> </span>Use <span class="sb">`scope: &quot;global&quot;`</span> for user preferences and identity.
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="gu">## Memory (MemoryMesh)</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>MemoryMesh is configured as an MCP tool in this project. It adds persistent,
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>structured, cross-tool memory on top of your existing memory system. Use it
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>alongside your default memory -- it enhances, not replaces.
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="gu">### At the start of every conversation</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>Call <span class="sb">`mcp__memorymesh__recall`</span> with a summary of the user&#39;s request to load
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>prior context, decisions, and patterns. If <span class="sb">`session_start`</span> is available,
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>call it to load user profile, guardrails, and project context.
+</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a>
+</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a><span class="gu">### When to `recall`</span>
+</span><span id="__span-19-14"><a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a>
+</span><span id="__span-19-15"><a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a><span class="k">-</span><span class="w"> </span><span class="gs">**Start of every conversation**</span>: Check for relevant prior context.
+</span><span id="__span-19-16"><a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a><span class="k">-</span><span class="w"> </span><span class="gs">**Before making decisions**</span>: Check if this was decided before.
+</span><span id="__span-19-17"><a id="__codelineno-19-17" name="__codelineno-19-17" href="#__codelineno-19-17"></a><span class="k">-</span><span class="w"> </span><span class="gs">**When debugging**</span>: Check if this problem was encountered previously.
+</span><span id="__span-19-18"><a id="__codelineno-19-18" name="__codelineno-19-18" href="#__codelineno-19-18"></a>
+</span><span id="__span-19-19"><a id="__codelineno-19-19" name="__codelineno-19-19" href="#__codelineno-19-19"></a><span class="gu">### When to `remember`</span>
+</span><span id="__span-19-20"><a id="__codelineno-19-20" name="__codelineno-19-20" href="#__codelineno-19-20"></a>
+</span><span id="__span-19-21"><a id="__codelineno-19-21" name="__codelineno-19-21" href="#__codelineno-19-21"></a><span class="k">-</span><span class="w"> </span><span class="gs">**When the user says &quot;remember this&quot;**</span>: Store it with a category.
+</span><span id="__span-19-22"><a id="__codelineno-19-22" name="__codelineno-19-22" href="#__codelineno-19-22"></a><span class="k">-</span><span class="w"> </span><span class="gs">**After completing a task**</span>: Store key decisions and patterns.
+</span><span id="__span-19-23"><a id="__codelineno-19-23" name="__codelineno-19-23" href="#__codelineno-19-23"></a>  Use <span class="sb">`category`</span> to classify: <span class="sb">`&quot;decision&quot;`</span>, <span class="sb">`&quot;pattern&quot;`</span>, <span class="sb">`&quot;context&quot;`</span>.
+</span><span id="__span-19-24"><a id="__codelineno-19-24" name="__codelineno-19-24" href="#__codelineno-19-24"></a><span class="k">-</span><span class="w"> </span><span class="gs">**When the user teaches you something**</span>: Use <span class="sb">`category: &quot;preference&quot;`</span>
+</span><span id="__span-19-25"><a id="__codelineno-19-25" name="__codelineno-19-25" href="#__codelineno-19-25"></a>  or <span class="sb">`category: &quot;guardrail&quot;`</span> -- these auto-route to global scope.
+</span><span id="__span-19-26"><a id="__codelineno-19-26" name="__codelineno-19-26" href="#__codelineno-19-26"></a><span class="k">-</span><span class="w"> </span><span class="gs">**After fixing a non-trivial bug**</span>: Use <span class="sb">`category: &quot;mistake&quot;`</span>.
+</span><span id="__span-19-27"><a id="__codelineno-19-27" name="__codelineno-19-27" href="#__codelineno-19-27"></a>
+</span><span id="__span-19-28"><a id="__codelineno-19-28" name="__codelineno-19-28" href="#__codelineno-19-28"></a><span class="gu">### Scope guidance</span>
+</span><span id="__span-19-29"><a id="__codelineno-19-29" name="__codelineno-19-29" href="#__codelineno-19-29"></a>
+</span><span id="__span-19-30"><a id="__codelineno-19-30" name="__codelineno-19-30" href="#__codelineno-19-30"></a>Categories auto-route scope. If not using categories:
+</span><span id="__span-19-31"><a id="__codelineno-19-31" name="__codelineno-19-31" href="#__codelineno-19-31"></a><span class="k">-</span><span class="w"> </span>Use <span class="sb">`scope: &quot;project&quot;`</span> for project-specific decisions.
+</span><span id="__span-19-32"><a id="__codelineno-19-32" name="__codelineno-19-32" href="#__codelineno-19-32"></a><span class="k">-</span><span class="w"> </span>Use <span class="sb">`scope: &quot;global&quot;`</span> for user preferences and identity.
 </span></code></pre></div>
 <h3 id="openai-codex-cli">OpenAI Codex CLI<a class="headerlink" href="#openai-codex-cli" title="Permanent link">&para;</a></h3>
 <p>Add a <code>## Memory (MemoryMesh)</code> section to your project's <code>AGENTS.md</code>:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="gu">## Memory (MemoryMesh)</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>MemoryMesh adds persistent, structured memory on top of your existing system.
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>It enhances your default memory with semantic search, categories, and
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>cross-tool sync.
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="k">-</span><span class="w"> </span>At the start of every task, call <span class="sb">`recall`</span> with a summary to load prior
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>  context. If <span class="sb">`session_start`</span> is available, call it for full user profile.
-</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="k">-</span><span class="w"> </span>Call <span class="sb">`recall`</span> before making decisions to check for prior context.
-</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="k">-</span><span class="w"> </span>After completing work, call <span class="sb">`remember`</span> with a <span class="sb">`category`</span> to store key
-</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>  decisions (<span class="sb">`&quot;decision&quot;`</span>), patterns (<span class="sb">`&quot;pattern&quot;`</span>), or context (<span class="sb">`&quot;context&quot;`</span>).
-</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="k">-</span><span class="w"> </span>When the user says &quot;remember this&quot;, store it with <span class="sb">`category: &quot;preference&quot;`</span>
-</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a>  or <span class="sb">`category: &quot;guardrail&quot;`</span> for user-level facts.
-</span></code></pre></div>
-<h3 id="google-gemini-cli">Google Gemini CLI<a class="headerlink" href="#google-gemini-cli" title="Permanent link">&para;</a></h3>
-<p>Add a <code>## Memory (MemoryMesh)</code> section to your project's <code>GEMINI.md</code>:</p>
 <div class="language-markdown highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="gu">## Memory (MemoryMesh)</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>MemoryMesh adds persistent, structured memory on top of your existing system.
@@ -1683,6 +1694,22 @@
 </span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="k">-</span><span class="w"> </span>When the user says &quot;remember this&quot;, store it with <span class="sb">`category: &quot;preference&quot;`</span>
 </span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>  or <span class="sb">`category: &quot;guardrail&quot;`</span> for user-level facts.
 </span></code></pre></div>
+<h3 id="google-gemini-cli">Google Gemini CLI<a class="headerlink" href="#google-gemini-cli" title="Permanent link">&para;</a></h3>
+<p>Add a <code>## Memory (MemoryMesh)</code> section to your project's <code>GEMINI.md</code>:</p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="gu">## Memory (MemoryMesh)</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>MemoryMesh adds persistent, structured memory on top of your existing system.
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>It enhances your default memory with semantic search, categories, and
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>cross-tool sync.
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="k">-</span><span class="w"> </span>At the start of every task, call <span class="sb">`recall`</span> with a summary to load prior
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>  context. If <span class="sb">`session_start`</span> is available, call it for full user profile.
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="k">-</span><span class="w"> </span>Call <span class="sb">`recall`</span> before making decisions to check for prior context.
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="k">-</span><span class="w"> </span>After completing work, call <span class="sb">`remember`</span> with a <span class="sb">`category`</span> to store key
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>  decisions (<span class="sb">`&quot;decision&quot;`</span>), patterns (<span class="sb">`&quot;pattern&quot;`</span>), or context (<span class="sb">`&quot;context&quot;`</span>).
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="k">-</span><span class="w"> </span>When the user says &quot;remember this&quot;, store it with <span class="sb">`category: &quot;preference&quot;`</span>
+</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>  or <span class="sb">`category: &quot;guardrail&quot;`</span> for user-level facts.
+</span></code></pre></div>
 <h3 id="generic-other-mcp-compatible-tools">Generic / Other MCP-Compatible Tools<a class="headerlink" href="#generic-other-mcp-compatible-tools" title="Permanent link">&para;</a></h3>
 <p>For any tool that supports MCP:</p>
 <ol>
@@ -1691,11 +1718,11 @@
 </ol>
 <h2 id="hybrid-memory-architecture">Hybrid Memory Architecture<a class="headerlink" href="#hybrid-memory-architecture" title="Permanent link">&para;</a></h2>
 <p>The MCP server uses a <strong>hybrid dual-store</strong> architecture that separates project-specific and global memories:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>~/.memorymesh/
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>  global.db                    &lt;- user preferences, identity, cross-project facts
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>&lt;project-root&gt;/.memorymesh/
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>  memories.db                  &lt;- project-specific memories, decisions, patterns
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>~/.memorymesh/
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>  global.db                    &lt;- user preferences, identity, cross-project facts
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>&lt;project-root&gt;/.memorymesh/
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>  memories.db                  &lt;- project-specific memories, decisions, patterns
 </span></code></pre></div>
 <p>The project root is automatically detected from MCP client roots, the <code>MEMORYMESH_PROJECT_ROOT</code> environment variable, or the current working directory (if it contains <code>.git</code> or <code>pyproject.toml</code>).</p>
 <p>All tools accept an optional <code>scope</code> parameter (<code>"project"</code> or <code>"global"</code>):
