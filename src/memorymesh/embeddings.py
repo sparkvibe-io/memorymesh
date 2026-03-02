@@ -21,6 +21,8 @@ _BLOCKED_HOSTS = frozenset(
     {
         "169.254.169.254",
         "metadata.google.internal",
+        "0.0.0.0",
+        "0",
     }
 )
 
@@ -45,7 +47,7 @@ def _validate_base_url(url: str, *, allow_http_localhost: bool = True) -> None:
     parsed = urllib.parse.urlparse(url)
     hostname = (parsed.hostname or "").lower()
 
-    if hostname in _BLOCKED_HOSTS or hostname.startswith("fd00:"):
+    if hostname in _BLOCKED_HOSTS or hostname.startswith("fd00:") or hostname.startswith("fe80:"):
         raise ValueError(f"Blocked base URL: {url!r} targets a restricted address.")
 
     if parsed.scheme == "http" and hostname not in ("localhost", "127.0.0.1", "::1"):

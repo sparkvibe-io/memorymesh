@@ -24,6 +24,8 @@ _SECRET_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"), "JWT token"),
     (re.compile(r"AKIA[0-9A-Z]{16}"), "AWS access key"),
     (re.compile(r"xox[bpsar]-[A-Za-z0-9-]{10,}"), "Slack token"),
+    (re.compile(r"sk-ant-[a-zA-Z0-9_-]{20,}"), "Anthropic API key"),
+    (re.compile(r"AIza[A-Za-z0-9_-]{35}"), "Google API key"),
 ]
 
 

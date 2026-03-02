@@ -188,10 +188,10 @@ class TestConflictMode:
         tmp_mesh.remember("test memory one")  # duplicate, default mode
         assert tmp_mesh.count() == 2
 
-    def test_invalid_conflict_mode_falls_back(self, tmp_mesh):
-        """Invalid on_conflict value should fall back to keep_both."""
-        mid = tmp_mesh.remember("test memory", on_conflict="invalid_mode")
-        assert mid != ""
+    def test_invalid_conflict_mode_raises(self, tmp_mesh):
+        """Invalid on_conflict value should raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid on_conflict value"):
+            tmp_mesh.remember("test memory", on_conflict="invalid_mode")
 
     def test_contradiction_flagged_in_metadata(self, tmp_mesh):
         mid1 = tmp_mesh.remember("The database host is localhost")

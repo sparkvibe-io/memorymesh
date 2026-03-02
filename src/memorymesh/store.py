@@ -285,6 +285,7 @@ class MemoryStore:
             conn = sqlite3.connect(self._path)
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.execute("PRAGMA foreign_keys=ON;")
+            conn.execute("PRAGMA busy_timeout = 5000;")
             conn.row_factory = sqlite3.Row
             self._local.conn = conn
         return conn

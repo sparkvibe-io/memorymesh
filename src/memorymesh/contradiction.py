@@ -40,7 +40,7 @@ def find_contradictions(
     """Find existing memories that may contradict the new text.
 
     Strategy:
-        1. If embeddings are available, retrieve all memories with embeddings,
+        1. If embeddings are available, retrieve top candidates with embeddings,
            compute cosine similarity, and filter those above *threshold*.
         2. If no embeddings, fall back to keyword search for candidates.
         3. Return candidates sorted by similarity (descending).
@@ -62,7 +62,7 @@ def find_contradictions(
 
     if embedding:
         # Vector-based search
-        all_with_emb = store.get_all_with_embeddings(limit=10_000)
+        all_with_emb = store.get_candidates_with_embeddings(limit=500)
         for mem in all_with_emb:
             if mem.embedding:
                 try:

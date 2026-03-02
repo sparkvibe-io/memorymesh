@@ -281,7 +281,10 @@ class MemoryMesh:
         try:
             conflict_mode = ConflictMode(on_conflict)
         except ValueError:
-            conflict_mode = ConflictMode.KEEP_BOTH
+            raise ValueError(
+                f"Invalid on_conflict value: {on_conflict!r}. "
+                f"Must be one of: 'keep_both', 'update', 'skip'."
+            )
 
         contradictions = find_contradictions(
             text=text,
@@ -651,10 +654,8 @@ class MemoryMesh:
         new_metadata = metadata if metadata is not None else mem.metadata
 
         if scope is not None and scope != current_scope:
-            # -- Scope migration: delete from old, create in new store ---
+            # -- Scope migration: save to new store first, then delete old ---
             validate_scope(scope)
-            old_store = self._store_for_scope(current_scope)
-            old_store.delete(memory_id)
 
             # Recompute embedding for the (possibly new) text.
             emb = self._safe_embed(new_text)
@@ -673,6 +674,10 @@ class MemoryMesh:
             )
             target_store = self._store_for_scope(scope)
             target_store.save(new_mem)
+
+            # Delete from old store only after new store write succeeds.
+            old_store = self._store_for_scope(current_scope)
+            old_store.delete(memory_id)
             logger.debug(
                 "Migrated memory %s from %s to %s",
                 memory_id,

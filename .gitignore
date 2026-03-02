@@ -76,6 +76,12 @@ site/
 # Internal working folders (not for public repo)
 archive/publicity/
 archive/critique/
+archive/vision/
+archive/feedback/
+
+# AI agent instruction files (local only)
+GEMINI.md
+AGENTS.md
 
 # Build artifacts
 *.so

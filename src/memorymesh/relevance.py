@@ -175,9 +175,8 @@ class RelevanceEngine:
 
         Memories with ``decay_rate == 0`` are unaffected.
 
-        This method **mutates** the ``importance`` and ``updated_at``
-        fields of each memory in-place and also returns the list for
-        convenience.
+        This method **mutates** the ``importance`` field of each memory
+        in-place and also returns the list for convenience.
 
         Args:
             memories: Memories to decay.

@@ -26,6 +26,8 @@ from .memory import GLOBAL_SCOPE, PROJECT_SCOPE
 
 logger = logging.getLogger(__name__)
 
+MAX_REQUEST_BODY = 1_000_000  # Maximum request body size in bytes
+
 
 class DashboardHandler(BaseHTTPRequestHandler):
     """HTTP request handler for the MemoryMesh dashboard.
@@ -201,6 +203,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "Empty request body"}, status=400)
             return
 
+        if content_length > MAX_REQUEST_BODY:
+            self._send_json({"error": "Request body too large"}, status=413)
+            return
+
         body = self.rfile.read(content_length)
         try:
             data = json.loads(body)
@@ -248,7 +254,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
         """Send a JSON response with appropriate headers."""
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        host, port = self.server.server_address
+        if host in ("0.0.0.0", ""):
+            host = "127.0.0.1"
+        self.send_header("Access-Control-Allow-Origin", f"http://{host}:{port}")
         self.end_headers()
         body = json.dumps(data, ensure_ascii=False)
         self.wfile.write(body.encode("utf-8"))

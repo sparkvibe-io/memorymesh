@@ -423,6 +423,33 @@ class MemoryMeshMCPServer:
         self._project_root: str | None = None
         self._detection_diagnostics: list[str] = []
         self._client_name: str = "unknown"
+
+        # Cached handler dispatch dicts -- built once, reused on every call.
+        # Maps method/tool names to attribute names for getattr-based dispatch,
+        # so that test mocking (patch.object) still works correctly.
+        self._method_handlers: dict[str, str] = {
+            "initialize": "_handle_initialize",
+            "initialized": "_handle_initialized",
+            "ping": "_handle_ping",
+            "tools/list": "_handle_tools_list",
+            "tools/call": "_handle_tools_call",
+            "prompts/list": "_handle_prompts_list",
+            "prompts/get": "_handle_prompts_get",
+            "notifications/initialized": "_handle_initialized",
+        }
+        self._tool_handlers: dict[str, str] = {
+            "remember": "_tool_remember",
+            "recall": "_tool_recall",
+            "forget": "_tool_forget",
+            "forget_all": "_tool_forget_all",
+            "memory_stats": "_tool_memory_stats",
+            "session_start": "_tool_session_start",
+            "update_memory": "_tool_update_memory",
+            "review_memories": "_tool_review_memories",
+            "status": "_tool_status",
+            "configure_project": "_tool_configure_project",
+        }
+
         logger.info("MemoryMeshMCPServer created (lazy init, mesh=%r)", self._mesh)
 
     # ------------------------------------------------------------------
@@ -583,17 +610,10 @@ class MemoryMeshMCPServer:
             A callable ``(params) -> result``, or ``None`` if the method
             is not supported.
         """
-        handlers: dict[str, Any] = {
-            "initialize": self._handle_initialize,
-            "initialized": self._handle_initialized,
-            "ping": self._handle_ping,
-            "tools/list": self._handle_tools_list,
-            "tools/call": self._handle_tools_call,
-            "prompts/list": self._handle_prompts_list,
-            "prompts/get": self._handle_prompts_get,
-            "notifications/initialized": self._handle_initialized,
-        }
-        return handlers.get(method)
+        attr_name = self._method_handlers.get(method)
+        if attr_name is None:
+            return None
+        return getattr(self, attr_name)
 
     # ------------------------------------------------------------------
     # Protocol handlers
@@ -717,23 +737,11 @@ class MemoryMeshMCPServer:
 
         logger.info("Tool call: %s (keys: %s)", tool_name, list(arguments.keys()))
 
-        tool_handlers: dict[str, Any] = {
-            "remember": self._tool_remember,
-            "recall": self._tool_recall,
-            "forget": self._tool_forget,
-            "forget_all": self._tool_forget_all,
-            "memory_stats": self._tool_memory_stats,
-            "session_start": self._tool_session_start,
-            "update_memory": self._tool_update_memory,
-            "review_memories": self._tool_review_memories,
-            "status": self._tool_status,
-            "configure_project": self._tool_configure_project,
-        }
-
-        handler = tool_handlers.get(tool_name)  # type: ignore[arg-type]
-        if handler is None:
+        attr_name = self._tool_handlers.get(tool_name)  # type: ignore[arg-type]
+        if attr_name is None:
             return self._tool_error(f"Unknown tool: {tool_name}")
 
+        handler = getattr(self, attr_name)
         try:
             return handler(arguments)  # type: ignore[no-any-return]
         except Exception:
@@ -841,7 +849,8 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with the new memory ID.
         """
-        assert self._mesh is not None  # Guarded by _handle_tools_call
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
         text = args.get("text")
         if not text or not isinstance(text, str):
             return self._tool_error("'text' is required and must be a non-empty string.")
@@ -934,7 +943,8 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with a list of matching memories.
         """
-        assert self._mesh is not None  # Guarded by _handle_tools_call
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
         query = args.get("query")
         if not query or not isinstance(query, str):
             return self._tool_error("'query' is required and must be a non-empty string.")
@@ -993,7 +1003,8 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response indicating success or failure.
         """
-        assert self._mesh is not None  # Guarded by _handle_tools_call
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
         memory_id = args.get("memory_id")
         if not memory_id or not isinstance(memory_id, str):
             return self._tool_error("'memory_id' is required and must be a string.")
@@ -1017,7 +1028,8 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with the count of deleted memories.
         """
-        assert self._mesh is not None  # Guarded by _handle_tools_call
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
         scope = args.get("scope", PROJECT_SCOPE)
         if scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
             return self._tool_error("'scope' must be 'project' or 'global'.")
@@ -1039,7 +1051,8 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with memory statistics.
         """
-        assert self._mesh is not None  # Guarded by _handle_tools_call
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
         scope = args.get("scope")  # None means combined
         if scope is not None and scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
             return self._tool_error("'scope' must be 'project', 'global', or omitted.")
@@ -1068,7 +1081,8 @@ class MemoryMeshMCPServer:
             MCP content response with structured session context
             including store health information.
         """
-        assert self._mesh is not None  # Guarded by _handle_tools_call
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
         project_context = args.get("project_context")
         if project_context is not None and not isinstance(project_context, str):
             return self._tool_error("'project_context' must be a string.")
@@ -1104,7 +1118,8 @@ class MemoryMeshMCPServer:
             MCP content response with the updated memory info, or an
             error if the memory was not found.
         """
-        assert self._mesh is not None  # Guarded by _handle_tools_call
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
         memory_id = args.get("memory_id")
         if not memory_id or not isinstance(memory_id, str):
             return self._tool_error("'memory_id' is required and must be a non-empty string.")
@@ -1170,7 +1185,8 @@ class MemoryMeshMCPServer:
         Returns:
             MCP content response with review issues and quality score.
         """
-        assert self._mesh is not None  # Guarded by _handle_tools_call
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
         from .review import review_memories
 
         scope = args.get("scope")
