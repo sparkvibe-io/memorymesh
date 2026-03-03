@@ -1,19 +1,17 @@
 # Roadmap
 
-## v4.1 -- Hardening (In Progress)
-
-Security, correctness, and performance fixes from a comprehensive multi-reviewer audit. No new features.
-
-- Critical database query optimizations
-- Security hardening (CORS, SSRF, input validation)
-- MCP server robustness improvements
-- PEP 561 typing support
-
----
-
 ## v5.0 -- Performance & Scale
 
-Scalability improvements for 5K+ memories. ANN vector indexing, FTS5 keyword search, batch operations, query projection optimization.
+Scalability improvements for 5K+ memories.
+
+- sqlite-vec ANN vector indexing
+- FTS5 keyword search
+- `remember_batch()` for bulk inserts
+- Category as real column with composite covering index and CHECK constraints
+- Persist decay to DB, separate `last_accessed_at` from `updated_at`
+- `backup()`/`restore()` API
+- `StoreProtocol` abstract interface
+- NumPy-accelerated cosine similarity
 
 ---
 
@@ -27,6 +25,8 @@ Spaced-repetition learning, automatic memory consolidation, cross-session linkin
 
 | Version | Milestone |
 |---|---|
+| **v4.3** | Performance: bulk access updates, light listing (skip embeddings), recency feedback loop fix |
+| **v4.1** | Hardening: contradiction scan optimization, CORS/SSRF security, atomic scope migration, PEP 561 |
 | **v4.0** | Invisible Memory: Smart Sync, configurable weights, EncryptedStore, security hardening |
 | **v3.x** | Intelligent memory: pin support, privacy guard, contradiction detection, retrieval filters, dashboard |
 | **v2.0** | Personality engine: 9 categories, auto-categorization, session_start, structured sync |

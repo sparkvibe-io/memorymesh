@@ -409,9 +409,7 @@ TOOLS: list[dict[str, Any]] = [
                 "scope": {
                     "type": "string",
                     "enum": ["project", "global"],
-                    "description": (
-                        "Which scope to clean up. Default: 'project'."
-                    ),
+                    "description": ("Which scope to clean up. Default: 'project'."),
                 },
                 "mode": {
                     "type": "string",
@@ -425,8 +423,7 @@ TOOLS: list[dict[str, Any]] = [
                 "stale_days": {
                     "type": "integer",
                     "description": (
-                        "Minimum age in days for a memory to be considered stale. "
-                        "Default: 30."
+                        "Minimum age in days for a memory to be considered stale. Default: 30."
                     ),
                     "minimum": 1,
                 },
@@ -1333,9 +1330,7 @@ class MemoryMeshMCPServer:
 
         mode = args.get("mode", "all")
         if mode not in ("deduplicate", "prune_stale", "all"):
-            return self._tool_error(
-                "'mode' must be 'deduplicate', 'prune_stale', or 'all'."
-            )
+            return self._tool_error("'mode' must be 'deduplicate', 'prune_stale', or 'all'.")
 
         stale_days = args.get("stale_days", 30)
         if not isinstance(stale_days, int) or stale_days < 1:

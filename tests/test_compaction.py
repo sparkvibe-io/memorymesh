@@ -289,11 +289,15 @@ class TestCompact:
         # Use on_conflict="keep_both" so both survive for compaction testing.
         tmp_mesh.remember(
             "The user prefers dark mode for the editor always",
-            scope="project", importance=0.8, on_conflict="keep_both",
+            scope="project",
+            importance=0.8,
+            on_conflict="keep_both",
         )
         tmp_mesh.remember(
             "The user prefers dark mode for the editor setting",
-            scope="project", importance=0.5, on_conflict="keep_both",
+            scope="project",
+            importance=0.5,
+            on_conflict="keep_both",
         )
         assert tmp_mesh.count(scope="project") == 2
 
@@ -311,11 +315,13 @@ class TestCompact:
     def test_compact_dry_run(self, tmp_mesh):
         tmp_mesh.remember(
             "duplicate text here for testing the compaction logic",
-            scope="project", on_conflict="keep_both",
+            scope="project",
+            on_conflict="keep_both",
         )
         tmp_mesh.remember(
             "duplicate text here for review the compaction logic",
-            scope="project", on_conflict="keep_both",
+            scope="project",
+            on_conflict="keep_both",
         )
         assert tmp_mesh.count(scope="project") == 2
 
@@ -344,11 +350,13 @@ class TestCompact:
     def test_compact_global_scope(self, tmp_mesh):
         tmp_mesh.remember(
             "user global duplicate preference setting for theme",
-            scope="global", on_conflict="keep_both",
+            scope="global",
+            on_conflict="keep_both",
         )
         tmp_mesh.remember(
             "user global duplicate preference config for theme",
-            scope="global", on_conflict="keep_both",
+            scope="global",
+            on_conflict="keep_both",
         )
         assert tmp_mesh.count(scope="global") == 2
 
@@ -371,11 +379,13 @@ class TestCompact:
     def test_compact_result_details(self, tmp_mesh):
         tmp_mesh.remember(
             "same text for detail test review and compaction logic",
-            scope="project", on_conflict="keep_both",
+            scope="project",
+            on_conflict="keep_both",
         )
         tmp_mesh.remember(
             "same text for detail test check and compaction logic",
-            scope="project", on_conflict="keep_both",
+            scope="project",
+            on_conflict="keep_both",
         )
 
         result = tmp_mesh.compact(scope="project", similarity_threshold=0.7, dry_run=True)
@@ -442,11 +452,13 @@ class TestCompactCLI:
 
         tmp_mesh.remember(
             "duplicate memory for CLI testing the compaction logic",
-            scope="project", on_conflict="keep_both",
+            scope="project",
+            on_conflict="keep_both",
         )
         tmp_mesh.remember(
             "duplicate memory for CLI review the compaction logic",
-            scope="project", on_conflict="keep_both",
+            scope="project",
+            on_conflict="keep_both",
         )
 
         project_db = tmp_mesh.project_path
@@ -472,11 +484,13 @@ class TestCompactCLI:
 
         tmp_mesh.remember(
             "dry run test memory content for compaction logic",
-            scope="project", on_conflict="keep_both",
+            scope="project",
+            on_conflict="keep_both",
         )
         tmp_mesh.remember(
             "dry run test memory review for compaction logic",
-            scope="project", on_conflict="keep_both",
+            scope="project",
+            on_conflict="keep_both",
         )
 
         project_db = tmp_mesh.project_path

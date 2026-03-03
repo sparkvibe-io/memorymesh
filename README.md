@@ -183,9 +183,24 @@ pip install "memorymesh[all]"
 
 ---
 
-## What's New in v4
+## What's New
 
-- **Smart Sync** -- Export the top-N most relevant memories to `.md` files, ranked by importance and recency. No more full dumps -- only what matters.
+### v4.3 -- Performance (Latest)
+
+- **Bulk Access Updates** -- `recall()` batches N access-time updates into 1-2 SQL calls instead of N.
+- **Light Listing** -- `session_start` and `smart_sync` skip loading embedding blobs, reducing I/O.
+- **Recency Fix** -- `update_access()` no longer sets `updated_at`, fixing a recency feedback loop.
+
+### v4.1 -- Hardening
+
+- **Contradiction Scan** -- 10K→500 candidate limit for contradiction detection (biggest perf win).
+- **Security** -- CORS same-origin, 1MB body limit, SSRF blocklist expansion, MCP assert→if/raise.
+- **Correctness** -- Atomic scope migration (save-first-then-delete), `on_conflict` validation.
+- **Infra** -- `PRAGMA busy_timeout=5000`, PEP 561 `py.typed`, expanded secret regex patterns.
+
+### v4.0 -- Invisible Memory
+
+- **Smart Sync** -- Export the top-N most relevant memories to `.md` files, ranked by importance and recency.
 - **Configurable Relevance Weights** -- Tune recency, importance, and similarity weights via environment variables or constructor parameters.
 - **EncryptedStore Completeness** -- `EncryptedMemoryStore` now supports `search_filtered` and `update_fields`, matching the full `MemoryStore` interface.
 - **Security Hardening** -- SQL injection fix in `search_filtered` (strict allowlist for metadata keys) and explicit file permissions on database files.
@@ -194,9 +209,9 @@ pip install "memorymesh[all]"
 
 ## Roadmap
 
-**v4.0 -- Invisible Memory** has shipped (v4.0.1). Smart Sync, configurable relevance weights, EncryptedStore completeness, and security hardening. Available on [PyPI](https://pypi.org/project/memorymesh/4.0.1/) and [GitHub](https://github.com/sparkvibe-io/memorymesh/releases/tag/v4.0.1).
+**v4.3.0** is the latest release. Available on [PyPI](https://pypi.org/project/memorymesh/).
 
-**v5.0 -- Adaptive Memory** is next. Heuristic-based question frequency tracking, behavioral pattern detection, and multi-device sync via Syncthing/rsync. Lightweight and local -- no LLM-based anticipation, no cloud sync.
+**v5.0 -- Performance & Scale** is next. sqlite-vec ANN indexing, FTS5 keyword search, batch operations, and NumPy-accelerated cosine similarity for 5K+ memory stores.
 
 See the [full roadmap](https://github.com/sparkvibe-io/memorymesh/blob/main/ROADMAP.md) for details, strategic context, and completed milestones.
 
