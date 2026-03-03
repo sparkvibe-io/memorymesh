@@ -254,7 +254,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
         """Send a JSON response with appropriate headers."""
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        host, port = self.server.server_address
+        addr = self.server.server_address
+        assert isinstance(addr, tuple)
+        host, port = addr
         if host in ("0.0.0.0", ""):
             host = "127.0.0.1"
         self.send_header("Access-Control-Allow-Origin", f"http://{host}:{port}")
