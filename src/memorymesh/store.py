@@ -369,6 +369,50 @@ class MemoryStore:
             cur.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
             return cur.rowcount > 0
 
+    def find_by_exact_text(self, text: str) -> Memory | None:
+        """Find a memory with exactly matching text.
+
+        Uses a simple ``WHERE text = ?`` query — case-sensitive, no
+        wildcards.  Returns the first match (by most recently updated)
+        or ``None`` if no exact match exists.
+
+        Args:
+            text: The exact text to search for.
+
+        Returns:
+            The matching :class:`Memory`, or ``None``.
+        """
+        with self._cursor() as cur:
+            cur.execute(
+                "SELECT * FROM memories WHERE text = ? ORDER BY updated_at DESC LIMIT 1",
+                (text,),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return self._row_to_memory(row)
+
+    def delete_batch(self, memory_ids: list[str]) -> int:
+        """Delete multiple memories by their IDs in a single operation.
+
+        Uses a parameterized ``IN`` clause for efficiency.
+
+        Args:
+            memory_ids: List of memory IDs to delete.
+
+        Returns:
+            The number of rows actually deleted.
+        """
+        if not memory_ids:
+            return 0
+        placeholders = ",".join("?" for _ in memory_ids)
+        with self._cursor() as cur:
+            cur.execute(
+                f"DELETE FROM memories WHERE id IN ({placeholders})",
+                memory_ids,
+            )
+            return cur.rowcount
+
     def search_by_text(self, query: str, limit: int = 20) -> list[Memory]:
         """Search memories by substring match (case-insensitive).
 

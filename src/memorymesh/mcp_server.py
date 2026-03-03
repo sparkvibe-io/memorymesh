@@ -2,8 +2,9 @@
 
 Exposes MemoryMesh as an MCP tool server over stdin/stdout JSON-RPC,
 allowing any MCP-compatible AI tool (Claude Code, Cursor, Windsurf, etc.)
-to use ``remember``, ``recall``, ``forget``, ``forget_all``,
-``memory_stats``, and ``session_start`` as first-class tools.
+to use ``remember``, ``recall``, ``forget``, ``forget_batch``,
+``forget_all``, ``cleanup``, ``memory_stats``, and ``session_start``
+as first-class tools.
 
 This module uses **only the Python standard library** (json, sys, logging)
 so it introduces zero additional dependencies.
@@ -176,8 +177,8 @@ TOOLS: list[dict[str, Any]] = [
                     "enum": ["keep_both", "update", "skip"],
                     "description": (
                         "How to handle contradictions with existing memories. "
-                        "'keep_both' (default) stores both and flags the contradiction. "
-                        "'update' replaces the most similar existing memory. "
+                        "'update' (default) replaces the most similar existing memory. "
+                        "'keep_both' stores both and flags the contradiction. "
                         "'skip' discards the new memory if a contradiction is found."
                     ),
                 },
@@ -243,6 +244,26 @@ TOOLS: list[dict[str, Any]] = [
                 },
             },
             "required": ["memory_id"],
+        },
+    },
+    {
+        "name": "forget_batch",
+        "description": (
+            "Forget (permanently delete) multiple memories by their IDs in a "
+            "single call. More efficient than calling forget repeatedly. "
+            "Searches both project and global stores. Maximum 100 IDs per call."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "memory_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of memory IDs to delete.",
+                    "maxItems": 100,
+                },
+            },
+            "required": ["memory_ids"],
         },
     },
     {
@@ -375,6 +396,53 @@ TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "cleanup",
+        "description": (
+            "Run automated cleanup to reduce memory garbage. "
+            "Modes: 'deduplicate' merges near-duplicate memories, "
+            "'prune_stale' deletes old low-importance unaccessed memories, "
+            "'all' (default) runs both passes."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["project", "global"],
+                    "description": (
+                        "Which scope to clean up. Default: 'project'."
+                    ),
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["deduplicate", "prune_stale", "all"],
+                    "description": (
+                        "Cleanup mode. 'deduplicate' merges near-duplicates, "
+                        "'prune_stale' removes old low-importance memories, "
+                        "'all' (default) runs both."
+                    ),
+                },
+                "stale_days": {
+                    "type": "integer",
+                    "description": (
+                        "Minimum age in days for a memory to be considered stale. "
+                        "Default: 30."
+                    ),
+                    "minimum": 1,
+                },
+                "min_importance_threshold": {
+                    "type": "number",
+                    "description": (
+                        "Memories with importance below this value are candidates "
+                        "for pruning. Default: 0.3."
+                    ),
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                },
+            },
+        },
+    },
+    {
         "name": "configure_project",
         "description": (
             "Set the project root at runtime without restarting the server. "
@@ -441,11 +509,13 @@ class MemoryMeshMCPServer:
             "remember": "_tool_remember",
             "recall": "_tool_recall",
             "forget": "_tool_forget",
+            "forget_batch": "_tool_forget_batch",
             "forget_all": "_tool_forget_all",
             "memory_stats": "_tool_memory_stats",
             "session_start": "_tool_session_start",
             "update_memory": "_tool_update_memory",
             "review_memories": "_tool_review_memories",
+            "cleanup": "_tool_cleanup",
             "status": "_tool_status",
             "configure_project": "_tool_configure_project",
         }
@@ -890,7 +960,7 @@ class MemoryMeshMCPServer:
         auto_categorize_flag = args.get("auto_categorize", False)
         pin = args.get("pin", False)
         redact = args.get("redact_secrets", False)
-        on_conflict = args.get("on_conflict", "keep_both")
+        on_conflict = args.get("on_conflict", "update")
 
         # Auto-populate provenance metadata.
         metadata.setdefault("source", "mcp")
@@ -1016,6 +1086,33 @@ class MemoryMeshMCPServer:
             "message": (
                 f"Memory {memory_id} deleted." if deleted else f"Memory {memory_id} not found."
             ),
+        }
+        return self._tool_success(json.dumps(result, indent=2))
+
+    def _tool_forget_batch(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Execute the ``forget_batch`` tool.
+
+        Args:
+            args: Tool arguments. Must include ``memory_ids``.
+
+        Returns:
+            MCP content response with the count of deleted memories.
+        """
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
+        memory_ids = args.get("memory_ids")
+        if not memory_ids or not isinstance(memory_ids, list):
+            return self._tool_error("'memory_ids' is required and must be a non-empty list.")
+        if len(memory_ids) > 100:
+            return self._tool_error("Maximum 100 memory IDs per call.")
+        if not all(isinstance(mid, str) and mid for mid in memory_ids):
+            return self._tool_error("All entries in 'memory_ids' must be non-empty strings.")
+
+        deleted = self._mesh.forget_batch(memory_ids)
+        result = {
+            "requested": len(memory_ids),
+            "deleted": deleted,
+            "message": f"Deleted {deleted} of {len(memory_ids)} requested memories.",
         }
         return self._tool_success(json.dumps(result, indent=2))
 
@@ -1216,6 +1313,50 @@ class MemoryMeshMCPServer:
             "issues": issues_list,
         }
         return self._tool_success(json.dumps(result, indent=2))
+
+    def _tool_cleanup(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Execute the ``cleanup`` tool.
+
+        Args:
+            args: Tool arguments. May include ``scope``, ``mode``,
+                ``stale_days``, and ``min_importance_threshold``.
+
+        Returns:
+            MCP content response with cleanup summary.
+        """
+        if self._mesh is None:
+            return self._tool_error("MemoryMesh not initialized. Call initialize first.")
+
+        scope = args.get("scope", PROJECT_SCOPE)
+        if scope not in (PROJECT_SCOPE, GLOBAL_SCOPE):
+            return self._tool_error("'scope' must be 'project' or 'global'.")
+
+        mode = args.get("mode", "all")
+        if mode not in ("deduplicate", "prune_stale", "all"):
+            return self._tool_error(
+                "'mode' must be 'deduplicate', 'prune_stale', or 'all'."
+            )
+
+        stale_days = args.get("stale_days", 30)
+        if not isinstance(stale_days, int) or stale_days < 1:
+            return self._tool_error("'stale_days' must be a positive integer.")
+
+        min_importance_threshold = args.get("min_importance_threshold", 0.3)
+        if not isinstance(min_importance_threshold, (int, float)):
+            return self._tool_error("'min_importance_threshold' must be a number.")
+        min_importance_threshold = max(0.0, min(1.0, float(min_importance_threshold)))
+
+        try:
+            cleanup_result = self._mesh.cleanup(
+                scope=scope,
+                mode=mode,
+                stale_days=stale_days,
+                min_importance_threshold=min_importance_threshold,
+            )
+        except RuntimeError as exc:
+            return self._tool_error(str(exc))
+
+        return self._tool_success(json.dumps(cleanup_result, indent=2))
 
     def _tool_status(self, args: dict[str, Any]) -> dict[str, Any]:
         """Execute the ``status`` tool.

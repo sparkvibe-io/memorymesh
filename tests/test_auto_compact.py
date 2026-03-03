@@ -47,12 +47,10 @@ class TestAutoCompaction:
 
     def test_auto_compaction_triggers(self, mesh: MemoryMesh) -> None:
         mesh.compact_interval = 5
-        # Write 5 identical memories to trigger compaction
-        for _ in range(5):
-            mesh.remember("Exact duplicate text for compaction test")
-        # After compaction, some duplicates should be merged
-        # The exact count depends on Jaccard similarity threshold
-        # but we should have fewer than 5
+        # Write 5 similar (but not identical) memories to trigger compaction
+        for i in range(5):
+            mesh.remember(f"Server configuration item {i} for compaction test setup")
+        # After compaction, some near-duplicates may be merged
         count = mesh.count(scope="project")
         assert count <= 5  # compaction ran (may or may not merge depending on threshold)
 
@@ -73,12 +71,12 @@ class TestAutoCompaction:
 
     def test_compaction_runs_on_correct_scope(self, mesh: MemoryMesh) -> None:
         mesh.compact_interval = 3
-        # Write to global scope
-        for _ in range(3):
-            mesh.remember("Global preference text", scope="global")
-        # Write to project scope
-        for _ in range(3):
-            mesh.remember("Project context text", scope="project")
+        # Write to global scope (distinct texts to avoid dedup gate)
+        for i in range(3):
+            mesh.remember(f"Global preference text variant {i}", scope="global")
+        # Write to project scope (distinct texts to avoid dedup gate)
+        for i in range(3):
+            mesh.remember(f"Project context text variant {i}", scope="project")
         # Both scopes should have data
         assert mesh.count(scope="global") >= 1
         assert mesh.count(scope="project") >= 1

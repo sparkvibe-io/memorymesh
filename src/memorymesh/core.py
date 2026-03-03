@@ -167,7 +167,7 @@ class MemoryMesh:
         auto_categorize: bool = False,
         pin: bool = False,
         redact: bool = False,
-        on_conflict: str = "keep_both",
+        on_conflict: str = "update",
     ) -> str:
         """Store a new memory.
 
@@ -201,9 +201,9 @@ class MemoryMesh:
             redact: If ``True``, automatically redact detected secrets
                 (API keys, tokens, passwords) before storing.
             on_conflict: How to handle contradictions with existing
-                memories.  ``"keep_both"`` (default) stores both and
-                flags the contradiction.  ``"update"`` replaces the
-                most similar existing memory.  ``"skip"`` discards the
+                memories.  ``"update"`` (default) replaces the most
+                similar existing memory.  ``"keep_both"`` stores both
+                and flags the contradiction.  ``"skip"`` discards the
                 new memory if a contradiction is found.
 
         Returns:
@@ -253,6 +253,18 @@ class MemoryMesh:
         validate_scope(scope)
         store = self._store_for_scope(scope)
 
+        # -- Exact-text dedup gate ----------------------------------------
+        # Before computing embeddings or running contradiction detection,
+        # check if identical text already exists.  Return existing ID
+        # silently — this fires regardless of on_conflict.
+        existing = store.find_by_exact_text(text)
+        if existing is not None:
+            logger.debug(
+                "Exact duplicate found (%s), returning existing ID",
+                existing.id,
+            )
+            return existing.id
+
         if auto_importance:
             importance = score_importance(text, meta)
 
@@ -284,7 +296,7 @@ class MemoryMesh:
             raise ValueError(
                 f"Invalid on_conflict value: {on_conflict!r}. "
                 f"Must be one of: 'keep_both', 'update', 'skip'."
-            )
+            ) from None
 
         contradictions = find_contradictions(
             text=text,
@@ -484,6 +496,26 @@ class MemoryMesh:
             logger.debug("Forgot memory %s (global)", memory_id)
             return True
         return False
+
+    def forget_batch(self, memory_ids: list[str]) -> int:
+        """Forget (delete) multiple memories by their IDs.
+
+        Searches both the project and global stores.
+
+        Args:
+            memory_ids: List of memory IDs to delete.
+
+        Returns:
+            The total number of memories actually deleted.
+        """
+        if not memory_ids:
+            return 0
+        deleted = 0
+        if self._project_store:
+            deleted += self._project_store.delete_batch(memory_ids)
+        deleted += self._global_store.delete_batch(memory_ids)
+        logger.debug("forget_batch: deleted %d of %d requested", deleted, len(memory_ids))
+        return deleted
 
     def forget_all(self, scope: str = PROJECT_SCOPE) -> int:
         """Forget all memories in the given scope.
@@ -843,6 +875,90 @@ class MemoryMesh:
             similarity_threshold=similarity_threshold,
             dry_run=dry_run,
         )
+
+    def cleanup(
+        self,
+        scope: str = PROJECT_SCOPE,
+        mode: str = "all",
+        stale_days: int = 30,
+        min_importance_threshold: float = 0.3,
+    ) -> dict[str, Any]:
+        """Run automated cleanup to reduce memory garbage.
+
+        Three modes are available:
+
+        * ``"deduplicate"`` — delegates to :meth:`compact` to merge
+          near-duplicate memories.
+        * ``"prune_stale"`` — deletes memories that are old, low
+          importance, unaccessed, and not pinned.
+        * ``"all"`` (default) — runs both passes sequentially.
+
+        Args:
+            scope: ``"project"`` or ``"global"``.
+            mode: ``"deduplicate"``, ``"prune_stale"``, or ``"all"``.
+            stale_days: Minimum age in days for a memory to be
+                considered stale.  Default is 30.
+            min_importance_threshold: Memories with importance below
+                this value are candidates for pruning.  Default is 0.3.
+
+        Returns:
+            A dict summarising the cleanup with keys:
+
+            - ``mode`` — the mode that was run.
+            - ``deduplicate`` — compaction results (if applicable).
+            - ``prune_stale`` — pruning results (if applicable).
+
+        Raises:
+            ValueError: If *mode* is not a recognised value.
+            RuntimeError: If *scope* is ``"project"`` but no project
+                database is configured.
+        """
+        valid_modes = ("deduplicate", "prune_stale", "all")
+        if mode not in valid_modes:
+            raise ValueError(
+                f"Invalid cleanup mode: {mode!r}. Must be one of: {', '.join(valid_modes)}"
+            )
+
+        validate_scope(scope)
+        result: dict[str, Any] = {"mode": mode, "scope": scope}
+
+        # -- Deduplicate pass -------------------------------------------
+        if mode in ("deduplicate", "all"):
+            compaction = self.compact(scope=scope)
+            result["deduplicate"] = {
+                "merged_count": compaction.merged_count,
+                "deleted_ids": compaction.deleted_ids,
+            }
+
+        # -- Prune stale pass -------------------------------------------
+        if mode in ("prune_stale", "all"):
+            from datetime import datetime, timedelta, timezone
+
+            store = self._store_for_scope(scope)
+            all_mems = store.list_all(limit=10_000)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=stale_days)
+
+            prune_ids: list[str] = []
+            for mem in all_mems:
+                # Never prune pinned memories.
+                if mem.metadata.get("pinned"):
+                    continue
+                if (
+                    mem.importance < min_importance_threshold
+                    and mem.access_count <= 1
+                    and mem.created_at < cutoff
+                ):
+                    prune_ids.append(mem.id)
+
+            if prune_ids:
+                store.delete_batch(prune_ids)
+
+            result["prune_stale"] = {
+                "pruned_count": len(prune_ids),
+                "pruned_ids": prune_ids,
+            }
+
+        return result
 
     # ------------------------------------------------------------------
     # Session start (structured context retrieval)

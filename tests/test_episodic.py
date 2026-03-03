@@ -294,18 +294,20 @@ class TestCoreRecallWithSession:
 
         db_path = str(tmp_path / "recall_sess.db")  # type: ignore[operator]
         with MemoryMesh(path=db_path, embedding="none") as mesh:
-            # Create two memories with same text but different sessions.
+            # Create two memories with different text in different sessions.
             mesh.remember(
-                "SQLite design decision",
+                "SQLite design decision for schema",
                 scope="project",
                 session_id="sess-A",
                 importance=0.5,
+                on_conflict="keep_both",
             )
             mesh.remember(
-                "SQLite design decision",
+                "SQLite design decision for indexes",
                 scope="project",
                 session_id="sess-B",
                 importance=0.5,
+                on_conflict="keep_both",
             )
 
             # Recall with sess-A should boost sess-A memory.

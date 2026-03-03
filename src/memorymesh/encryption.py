@@ -530,6 +530,33 @@ class EncryptedMemoryStore:
 
     # -- Delegate non-field-reading operations ----------------------------
 
+    def find_by_exact_text(self, text: str) -> Memory | None:
+        """Find a memory with exactly matching text.
+
+        Because the ``text`` field is encrypted with a random IV, the
+        same plaintext produces different ciphertext each time.  An exact
+        ``WHERE text = ?`` query on the encrypted column will never
+        match.  Returns ``None`` unconditionally.
+
+        Args:
+            text: The plaintext to search for.
+
+        Returns:
+            Always ``None``.
+        """
+        return None
+
+    def delete_batch(self, memory_ids: list[str]) -> int:
+        """Delete multiple memories by their IDs.
+
+        Args:
+            memory_ids: List of memory IDs to delete.
+
+        Returns:
+            Number of rows deleted.
+        """
+        return self._store.delete_batch(memory_ids)
+
     def delete(self, memory_id: str) -> bool:
         """Delete a memory by ID.
 

@@ -285,11 +285,19 @@ class TestCompactionResult:
 
 class TestCompact:
     def test_compact_merges_duplicates(self, tmp_mesh):
-        tmp_mesh.remember("The user prefers dark mode.", scope="project", importance=0.8)
-        tmp_mesh.remember("The user prefers dark mode.", scope="project", importance=0.5)
+        # Near-duplicate text (exact duplicates are caught by dedup gate).
+        # Use on_conflict="keep_both" so both survive for compaction testing.
+        tmp_mesh.remember(
+            "The user prefers dark mode for the editor always",
+            scope="project", importance=0.8, on_conflict="keep_both",
+        )
+        tmp_mesh.remember(
+            "The user prefers dark mode for the editor setting",
+            scope="project", importance=0.5, on_conflict="keep_both",
+        )
         assert tmp_mesh.count(scope="project") == 2
 
-        result = tmp_mesh.compact(scope="project", similarity_threshold=0.85)
+        result = tmp_mesh.compact(scope="project", similarity_threshold=0.7)
         assert result.merged_count == 1
         assert len(result.deleted_ids) == 1
         assert len(result.kept_ids) == 1
@@ -301,11 +309,17 @@ class TestCompact:
         assert remaining[0].importance == 0.8
 
     def test_compact_dry_run(self, tmp_mesh):
-        tmp_mesh.remember("duplicate text here", scope="project")
-        tmp_mesh.remember("duplicate text here", scope="project")
+        tmp_mesh.remember(
+            "duplicate text here for testing the compaction logic",
+            scope="project", on_conflict="keep_both",
+        )
+        tmp_mesh.remember(
+            "duplicate text here for review the compaction logic",
+            scope="project", on_conflict="keep_both",
+        )
         assert tmp_mesh.count(scope="project") == 2
 
-        result = tmp_mesh.compact(scope="project", dry_run=True)
+        result = tmp_mesh.compact(scope="project", similarity_threshold=0.7, dry_run=True)
         assert result.merged_count == 1
         # Dry run should NOT delete anything.
         assert tmp_mesh.count(scope="project") == 2
@@ -328,11 +342,17 @@ class TestCompact:
         assert tmp_mesh.count(scope="project") == 2
 
     def test_compact_global_scope(self, tmp_mesh):
-        tmp_mesh.remember("global duplicate", scope="global")
-        tmp_mesh.remember("global duplicate", scope="global")
+        tmp_mesh.remember(
+            "user global duplicate preference setting for theme",
+            scope="global", on_conflict="keep_both",
+        )
+        tmp_mesh.remember(
+            "user global duplicate preference config for theme",
+            scope="global", on_conflict="keep_both",
+        )
         assert tmp_mesh.count(scope="global") == 2
 
-        result = tmp_mesh.compact(scope="global")
+        result = tmp_mesh.compact(scope="global", similarity_threshold=0.7)
         assert result.merged_count == 1
         assert tmp_mesh.count(scope="global") == 1
 
@@ -349,33 +369,41 @@ class TestCompact:
         assert result_low.merged_count == 1
 
     def test_compact_result_details(self, tmp_mesh):
-        tmp_mesh.remember("same text for detail test", scope="project")
-        tmp_mesh.remember("same text for detail test", scope="project")
+        tmp_mesh.remember(
+            "same text for detail test review and compaction logic",
+            scope="project", on_conflict="keep_both",
+        )
+        tmp_mesh.remember(
+            "same text for detail test check and compaction logic",
+            scope="project", on_conflict="keep_both",
+        )
 
-        result = tmp_mesh.compact(scope="project", dry_run=True)
+        result = tmp_mesh.compact(scope="project", similarity_threshold=0.7, dry_run=True)
         assert len(result.details) == 1
         detail = result.details[0]
         assert "primary_id" in detail
         assert "secondary_id" in detail
         assert "similarity" in detail
         assert "merged_text_preview" in detail
-        assert detail["similarity"] == 1.0
+        assert detail["similarity"] >= 0.7
 
     def test_compact_preserves_merged_metadata(self, tmp_mesh):
         tmp_mesh.remember(
-            "same memory",
+            "same memory content stored here for testing",
             scope="project",
             importance=0.9,
             metadata={"source": "user"},
+            on_conflict="keep_both",
         )
         tmp_mesh.remember(
-            "same memory",
+            "same memory content stored there for testing",
             scope="project",
             importance=0.5,
             metadata={"topic": "preferences"},
+            on_conflict="keep_both",
         )
 
-        result = tmp_mesh.compact(scope="project")
+        result = tmp_mesh.compact(scope="project", similarity_threshold=0.7)
         assert result.merged_count == 1
 
         remaining = tmp_mesh.list(scope="project")
@@ -412,12 +440,28 @@ class TestCompactCLI:
     def test_compact_cli_with_duplicates(self, tmp_mesh, capsys):
         from memorymesh.cli import main
 
-        tmp_mesh.remember("duplicate memory for CLI", scope="project")
-        tmp_mesh.remember("duplicate memory for CLI", scope="project")
+        tmp_mesh.remember(
+            "duplicate memory for CLI testing the compaction logic",
+            scope="project", on_conflict="keep_both",
+        )
+        tmp_mesh.remember(
+            "duplicate memory for CLI review the compaction logic",
+            scope="project", on_conflict="keep_both",
+        )
 
         project_db = tmp_mesh.project_path
         global_db = tmp_mesh.global_path
-        exit_code = main(["--project-path", project_db, "--global-path", global_db, "compact"])
+        exit_code = main(
+            [
+                "--project-path",
+                project_db,
+                "--global-path",
+                global_db,
+                "compact",
+                "--threshold",
+                "0.7",
+            ]
+        )
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "Merged 1 pair" in captured.out
@@ -426,8 +470,14 @@ class TestCompactCLI:
     def test_compact_cli_dry_run(self, tmp_mesh, capsys):
         from memorymesh.cli import main
 
-        tmp_mesh.remember("dry run test memory", scope="project")
-        tmp_mesh.remember("dry run test memory", scope="project")
+        tmp_mesh.remember(
+            "dry run test memory content for compaction logic",
+            scope="project", on_conflict="keep_both",
+        )
+        tmp_mesh.remember(
+            "dry run test memory review for compaction logic",
+            scope="project", on_conflict="keep_both",
+        )
 
         project_db = tmp_mesh.project_path
         global_db = tmp_mesh.global_path
@@ -439,6 +489,8 @@ class TestCompactCLI:
                 global_db,
                 "compact",
                 "--dry-run",
+                "--threshold",
+                "0.7",
             ]
         )
         assert exit_code == 0

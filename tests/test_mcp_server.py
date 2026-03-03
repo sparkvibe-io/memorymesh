@@ -94,7 +94,7 @@ class TestConstants:
     """Verify module-level constants are sane."""
 
     def test_tool_count(self) -> None:
-        assert len(TOOLS) == 10
+        assert len(TOOLS) == 12
 
     def test_prompt_count(self) -> None:
         assert len(PROMPTS) == 1
@@ -790,7 +790,7 @@ class TestHandleToolsList:
 
     def test_returns_all_tools(self, server: MemoryMeshMCPServer) -> None:
         result = server._handle_tools_list({})
-        assert len(result["tools"]) == 10
+        assert len(result["tools"]) == 12
 
     def test_expected_tool_names(self, server: MemoryMeshMCPServer) -> None:
         result = server._handle_tools_list({})
@@ -799,12 +799,14 @@ class TestHandleToolsList:
             "remember",
             "recall",
             "forget",
+            "forget_batch",
             "forget_all",
             "memory_stats",
             "session_start",
             "update_memory",
             "review_memories",
             "status",
+            "cleanup",
             "configure_project",
         }
         assert names == expected

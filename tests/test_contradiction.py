@@ -157,14 +157,27 @@ class TestConflictMode:
         assert tmp_mesh.count() == 2
 
     def test_skip_mode_exact_duplicate(self, tmp_mesh):
-        tmp_mesh.remember("The database host is localhost")
+        mid1 = tmp_mesh.remember("The database host is localhost")
         initial_count = tmp_mesh.count()
 
         mid = tmp_mesh.remember(
             "The database host is localhost",
             on_conflict="skip",
         )
-        # With exact text, high word overlap triggers contradiction -> skip
+        # Exact dedup gate fires before on_conflict — returns existing ID
+        assert mid == mid1
+        assert tmp_mesh.count() == initial_count
+
+    def test_skip_mode_similar_text(self, tmp_mesh):
+        """Skip mode should discard when similar (not identical) text exists."""
+        # First 5 words must match for LIKE search to find the candidate
+        tmp_mesh.remember("The application database host is set to localhost")
+        initial_count = tmp_mesh.count()
+
+        mid = tmp_mesh.remember(
+            "The application database host is set to 127.0.0.1",
+            on_conflict="skip",
+        )
         assert mid == ""
         assert tmp_mesh.count() == initial_count
 
@@ -176,16 +189,39 @@ class TestConflictMode:
             "The database host is localhost",
             on_conflict="update",
         )
-        # Should have replaced the old one
-        assert mid2 != ""
-        assert mid2 != mid1
-        # Count should stay the same (replaced, not added)
+        # Exact dedup gate returns existing ID — no replacement needed
+        assert mid2 == mid1
         assert tmp_mesh.count() == initial_count
 
-    def test_default_is_keep_both(self, tmp_mesh):
-        """Default on_conflict should be keep_both."""
-        tmp_mesh.remember("test memory one")
-        tmp_mesh.remember("test memory one")  # duplicate, default mode
+    def test_update_mode_similar_text(self, tmp_mesh):
+        """Update mode should replace when similar (not identical) text exists."""
+        # First 5 words must match for LIKE search to find the candidate
+        mid1 = tmp_mesh.remember("The application database host is set to localhost")
+        initial_count = tmp_mesh.count()
+
+        mid2 = tmp_mesh.remember(
+            "The application database host is set to 127.0.0.1",
+            on_conflict="update",
+        )
+        assert mid2 != ""
+        assert mid2 != mid1
+        assert tmp_mesh.count() == initial_count
+
+    def test_default_is_update(self, tmp_mesh):
+        """Default on_conflict should be update."""
+        # First 5 words shared for LIKE search, 1 word differs for Jaccard >= 0.75
+        tmp_mesh.remember("The application server uses port 3000 by default")
+        tmp_mesh.remember("The application server uses port 4000 by default")
+        # With update default, the second replaces the first
+        assert tmp_mesh.count() == 1
+
+    def test_explicit_keep_both_still_works(self, tmp_mesh):
+        """Explicit keep_both should still accumulate."""
+        tmp_mesh.remember("The application server uses port 3000 by default")
+        tmp_mesh.remember(
+            "The application server uses port 4000 by default",
+            on_conflict="keep_both",
+        )
         assert tmp_mesh.count() == 2
 
     def test_invalid_conflict_mode_raises(self, tmp_mesh):
@@ -194,9 +230,10 @@ class TestConflictMode:
             tmp_mesh.remember("test memory", on_conflict="invalid_mode")
 
     def test_contradiction_flagged_in_metadata(self, tmp_mesh):
-        mid1 = tmp_mesh.remember("The database host is localhost")
+        """Contradictions flagged for similar (not identical) text."""
+        mid1 = tmp_mesh.remember("The application database host is set to localhost")
         mid2 = tmp_mesh.remember(
-            "The database host is localhost",
+            "The application database host is set to remotehost",
             on_conflict="keep_both",
         )
         assert mid2 != ""
@@ -206,9 +243,10 @@ class TestConflictMode:
         assert mid1 in mem.metadata["contradicts"]
 
     def test_update_stores_replaced_id(self, tmp_mesh):
-        mid1 = tmp_mesh.remember("The database host is localhost")
+        """Update mode stores replaced_memory_id for similar text."""
+        mid1 = tmp_mesh.remember("The application database host is set to localhost")
         mid2 = tmp_mesh.remember(
-            "The database host is localhost",
+            "The application database host is set to remotehost",
             on_conflict="update",
         )
         assert mid2 != ""
