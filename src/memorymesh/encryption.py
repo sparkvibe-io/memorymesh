@@ -391,6 +391,19 @@ class EncryptedMemoryStore:
         mems = self._store.list_all(limit=limit, offset=offset)
         return [self._decrypt_memory(m) for m in mems]  # type: ignore[misc]
 
+    def list_all_light(self, limit: int = 100, offset: int = 0) -> list[Memory]:
+        """List and decrypt memories without loading embedding blobs.
+
+        Args:
+            limit: Maximum number of memories to return.
+            offset: Number of rows to skip.
+
+        Returns:
+            A list of decrypted :class:`Memory` objects with empty embeddings.
+        """
+        mems = self._store.list_all_light(limit=limit, offset=offset)
+        return [self._decrypt_memory(m) for m in mems]  # type: ignore[misc]
+
     def get_all_with_embeddings(self, limit: int = 10_000) -> list[Memory]:
         """Return decrypted memories that have embeddings.
 
@@ -590,6 +603,16 @@ class EncryptedMemoryStore:
     def clear(self) -> int:
         """Delete all memories."""
         return self._store.clear()
+
+    def bulk_update_access(self, memory_ids: list[str]) -> None:
+        """Increment access count for multiple memories in a single transaction.
+
+        Access count is plaintext, so this is a direct delegation.
+
+        Args:
+            memory_ids: List of memory IDs to update.
+        """
+        self._store.bulk_update_access(memory_ids)
 
     def update_access(self, memory_id: str) -> None:
         """Increment access count for a memory.

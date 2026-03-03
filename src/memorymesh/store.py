@@ -465,6 +465,36 @@ class MemoryStore:
             rows = cur.fetchall()
         return [self._row_to_memory(r) for r in rows]
 
+    def list_all_light(self, limit: int = 100, offset: int = 0) -> list[Memory]:
+        """List memories *without* loading embedding blobs.
+
+        Identical to :meth:`list_all` but uses an explicit column list
+        that excludes ``embedding_blob``.  Returned :class:`Memory`
+        objects have ``embedding=[]``.  Use this when only text and
+        metadata are needed (e.g. ``session_start``, ``smart_sync``).
+
+        Args:
+            limit: Maximum number of memories to return.
+            offset: Number of rows to skip.
+
+        Returns:
+            A list of :class:`Memory` objects ordered by most recently
+            updated first, with empty embedding vectors.
+        """
+        with self._cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, text, metadata_json, created_at, updated_at,
+                       access_count, importance, decay_rate, session_id
+                FROM memories
+                ORDER BY updated_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+            )
+            rows = cur.fetchall()
+        return [self._row_to_memory_light(r) for r in rows]
+
     def get_all_with_embeddings(self, limit: int = 10_000) -> list[Memory]:
         """Return memories that have a non-NULL embedding.
 
@@ -704,22 +734,42 @@ class MemoryStore:
             cur.execute("DELETE FROM memories")
         return total
 
+    def bulk_update_access(self, memory_ids: list[str]) -> None:
+        """Increment access_count for multiple memories in a single transaction.
+
+        Uses a parameterized ``IN`` clause to avoid per-row round-trips.
+        Does **not** update ``updated_at`` (see :meth:`update_access`).
+
+        Args:
+            memory_ids: List of memory IDs whose access_count should be
+                incremented.
+        """
+        if not memory_ids:
+            return
+        placeholders = ",".join("?" for _ in memory_ids)
+        with self._cursor() as cur:
+            cur.execute(
+                f"UPDATE memories SET access_count = access_count + 1 WHERE id IN ({placeholders})",
+                memory_ids,
+            )
+
     def update_access(self, memory_id: str) -> None:
-        """Increment access_count and refresh updated_at for a memory.
+        """Increment access_count for a memory.
+
+        Does **not** update ``updated_at`` -- that field reflects when the
+        memory's *content* was last modified, not when it was last read.
 
         Args:
             memory_id: The unique identifier of the memory.
         """
-        now = datetime.now(timezone.utc).isoformat()
         with self._cursor() as cur:
             cur.execute(
                 """
                 UPDATE memories
-                SET access_count = access_count + 1,
-                    updated_at = ?
+                SET access_count = access_count + 1
                 WHERE id = ?
                 """,
-                (now, memory_id),
+                (memory_id,),
             )
 
     def update_fields(
@@ -806,6 +856,22 @@ class MemoryStore:
             text=row["text"],
             metadata=json.loads(row["metadata_json"]),
             embedding=_unpack_embedding(row["embedding_blob"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            updated_at=datetime.fromisoformat(row["updated_at"]),
+            access_count=row["access_count"],
+            importance=row["importance"],
+            decay_rate=row["decay_rate"],
+            session_id=row["session_id"],
+        )
+
+    @staticmethod
+    def _row_to_memory_light(row: sqlite3.Row) -> Memory:
+        """Convert a row (without ``embedding_blob``) into a :class:`Memory`."""
+        return Memory(
+            id=row["id"],
+            text=row["text"],
+            metadata=json.loads(row["metadata_json"]),
+            embedding=[],
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
             access_count=row["access_count"],

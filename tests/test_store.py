@@ -313,3 +313,134 @@ def test_get_all_with_embeddings_still_works(tmp_path):
     assert len(results) == 1
     assert results[0].text == "embedded"
     store.close()
+
+
+# ------------------------------------------------------------------
+# bulk_update_access
+# ------------------------------------------------------------------
+
+
+def test_bulk_update_access(tmp_path):
+    """bulk_update_access increments access_count for multiple memories at once."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    mems = [_make_memory(f"Memory {i}") for i in range(5)]
+    for m in mems:
+        store.save(m)
+
+    ids = [m.id for m in mems[:3]]
+    store.bulk_update_access(ids)
+
+    for m in mems[:3]:
+        retrieved = store.get(m.id)
+        assert retrieved is not None
+        assert retrieved.access_count == 1
+    for m in mems[3:]:
+        retrieved = store.get(m.id)
+        assert retrieved is not None
+        assert retrieved.access_count == 0
+    store.close()
+
+
+def test_bulk_update_access_empty_list(tmp_path):
+    """bulk_update_access with an empty list is a no-op."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.bulk_update_access([])  # Should not raise.
+    store.close()
+
+
+def test_bulk_update_access_increments_cumulatively(tmp_path):
+    """Calling bulk_update_access twice increments access_count to 2."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    mem = _make_memory("Accessed twice")
+    store.save(mem)
+
+    store.bulk_update_access([mem.id])
+    store.bulk_update_access([mem.id])
+
+    retrieved = store.get(mem.id)
+    assert retrieved is not None
+    assert retrieved.access_count == 2
+    store.close()
+
+
+# ------------------------------------------------------------------
+# update_access does NOT change updated_at
+# ------------------------------------------------------------------
+
+
+def test_update_access_does_not_change_updated_at(tmp_path):
+    """update_access only increments access_count, leaving updated_at unchanged."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    mem = _make_memory("Stable timestamp")
+    store.save(mem)
+
+    before = store.get(mem.id)
+    assert before is not None
+    original_updated_at = before.updated_at
+
+    store.update_access(mem.id)
+
+    after = store.get(mem.id)
+    assert after is not None
+    assert after.access_count == 1
+    assert after.updated_at == original_updated_at
+
+
+def test_bulk_update_access_does_not_change_updated_at(tmp_path):
+    """bulk_update_access only increments access_count, leaving updated_at unchanged."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    mem = _make_memory("Stable timestamp bulk")
+    store.save(mem)
+
+    before = store.get(mem.id)
+    assert before is not None
+    original_updated_at = before.updated_at
+
+    store.bulk_update_access([mem.id])
+
+    after = store.get(mem.id)
+    assert after is not None
+    assert after.access_count == 1
+    assert after.updated_at == original_updated_at
+
+
+# ------------------------------------------------------------------
+# list_all_light
+# ------------------------------------------------------------------
+
+
+def test_list_all_light_excludes_embeddings(tmp_path):
+    """list_all_light returns memories with empty embedding vectors."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.save(_make_memory_with_embedding("With blob", embedding=[1.0, 2.0, 3.0]))
+    store.save(_make_memory("Without blob"))
+
+    results = store.list_all_light()
+    assert len(results) == 2
+    for m in results:
+        assert m.embedding == []
+
+
+def test_list_all_light_preserves_text_and_metadata(tmp_path):
+    """list_all_light returns correct text and metadata despite skipping embeddings."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    store.save(_make_memory("Important fact", metadata={"category": "decision"}))
+
+    results = store.list_all_light()
+    assert len(results) == 1
+    assert results[0].text == "Important fact"
+    assert results[0].metadata == {"category": "decision"}
+
+
+def test_list_all_light_pagination(tmp_path):
+    """list_all_light supports limit and offset."""
+    store = MemoryStore(path=tmp_path / "test.db")
+    for i in range(10):
+        store.save(_make_memory(f"Memory {i}"))
+
+    page = store.list_all_light(limit=3)
+    assert len(page) == 3
+
+    page = store.list_all_light(limit=5, offset=8)
+    assert len(page) == 2
+    store.close()

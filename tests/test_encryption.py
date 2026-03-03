@@ -369,6 +369,26 @@ class TestEncryptedMemoryStore:
         assert retrieved is not None
         assert retrieved.access_count == 1
 
+    def test_bulk_update_access(self, store) -> None:
+        """bulk_update_access works through the encrypted wrapper."""
+        mem1 = Memory(text="Bulk one")
+        mem2 = Memory(text="Bulk two")
+        store.save(mem1)
+        store.save(mem2)
+        store.bulk_update_access([mem1.id, mem2.id])
+        assert store.get(mem1.id).access_count == 1  # type: ignore[union-attr]
+        assert store.get(mem2.id).access_count == 1  # type: ignore[union-attr]
+
+    def test_list_all_light_decrypts(self, store) -> None:
+        """list_all_light returns decrypted memories without embeddings."""
+        mem = Memory(text="Light memory", embedding=[0.1, 0.2])
+        store.save(mem)
+
+        results = store.list_all_light()
+        assert len(results) == 1
+        assert results[0].text == "Light memory"
+        assert results[0].embedding == []
+
     def test_get_time_range(self, store) -> None:
         """get_time_range works through the encrypted wrapper."""
         store.save(Memory(text="Timestamped"))

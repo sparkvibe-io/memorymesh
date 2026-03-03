@@ -467,11 +467,14 @@ class MemoryMesh:
             if mem.id in boosted_ids:
                 mem.importance = max(0.0, mem.importance - session_boost)
 
-        # Update access counts for returned memories.
+        # Update access counts for returned memories (batched per store).
+        project_ids = [m.id for m in results if m.scope != GLOBAL_SCOPE]
+        global_ids = [m.id for m in results if m.scope == GLOBAL_SCOPE]
+        if project_ids and self._project_store:
+            self._project_store.bulk_update_access(project_ids)
+        if global_ids:
+            self._global_store.bulk_update_access(global_ids)
         for mem in results:
-            store = self._global_store if mem.scope == GLOBAL_SCOPE else self._project_store
-            if store:
-                store.update_access(mem.id)
             mem.access_count += 1
 
         return results
@@ -998,7 +1001,7 @@ class MemoryMesh:
         ) -> dict[str, list[Memory]]:
             if store is None:
                 return {cat: [] for cat in categories}
-            all_mems = store.list_all(limit=500)
+            all_mems = store.list_all_light(limit=500)
             by_cat: dict[str, list[Memory]] = {cat: [] for cat in categories}
             for mem in all_mems:
                 cat = mem.metadata.get("category")
@@ -1104,13 +1107,13 @@ class MemoryMesh:
         candidates: list[Memory] = []
 
         if scope in (None, PROJECT_SCOPE) and self._project_store:
-            project_mems = self._project_store.list_all(limit=10_000)
+            project_mems = self._project_store.list_all_light(limit=10_000)
             for m in project_mems:
                 m.scope = PROJECT_SCOPE
             candidates.extend(project_mems)
 
         if scope in (None, GLOBAL_SCOPE):
-            global_mems = self._global_store.list_all(limit=10_000)
+            global_mems = self._global_store.list_all_light(limit=10_000)
             for m in global_mems:
                 m.scope = GLOBAL_SCOPE
             candidates.extend(global_mems)
